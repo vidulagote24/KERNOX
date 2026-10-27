@@ -1,0 +1,111 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "dev-debug",
+      "displayName": "Debug (Ninja)",
+      "description": "Debug build with symbols, warnings, and tests",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "KERNOX_WARNINGS_AS_ERRORS": "ON",
+        "KERNOX_BUILD_TESTS": "ON",
+        "KERNOX_SANITIZER": "none"
+      }
+    },
+    {
+      "name": "dev-release",
+      "displayName": "Release (Ninja)",
+      "description": "Optimized release build",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "KERNOX_WARNINGS_AS_ERRORS": "ON",
+        "KERNOX_BUILD_TESTS": "ON",
+        "KERNOX_SANITIZER": "none"
+      }
+    },
+    {
+      "name": "dev-asan",
+      "displayName": "AddressSanitizer + UndefinedBehaviorSanitizer",
+      "description": "Debug build with ASan and UBSan memory/UB checks",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/asan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "KERNOX_WARNINGS_AS_ERRORS": "ON",
+        "KERNOX_BUILD_TESTS": "ON",
+        "KERNOX_SANITIZER": "asan"
+      }
+    },
+    {
+      "name": "dev-tsan",
+      "displayName": "ThreadSanitizer",
+      "description": "Debug build with TSan data-race detector",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/tsan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "KERNOX_WARNINGS_AS_ERRORS": "ON",
+        "KERNOX_BUILD_TESTS": "ON",
+        "KERNOX_SANITIZER": "tsan"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "dev-debug",
+      "configurePreset": "dev-debug"
+    },
+    {
+      "name": "dev-release",
+      "configurePreset": "dev-release"
+    },
+    {
+      "name": "dev-asan",
+      "configurePreset": "dev-asan"
+    },
+    {
+      "name": "dev-tsan",
+      "configurePreset": "dev-tsan"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "dev-debug",
+      "configurePreset": "dev-debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "dev-release",
+      "configurePreset": "dev-release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "dev-asan",
+      "configurePreset": "dev-asan",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "dev-tsan",
+      "configurePreset": "dev-tsan",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

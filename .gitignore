@@ -1,0 +1,32 @@
+# Build directories
+build/
+build-*/
+bin/
+lib/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+CTestTestfile.cmake
+Testing/
+compile_commands.json
+
+# Ninja generated files
+.ninja_deps
+.ninja_log
+
+# IDE & Editor artifacts
+.vscode/
+.vs/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test & OS artifacts
+*.log
+*.tmp
+/core
+vgcore.*
