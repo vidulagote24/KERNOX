@@ -116,6 +116,26 @@ target_link_libraries(kernox_sim PUBLIC
 )
 
 # -----------------------------------------------------------------------------
+# System Modules: kernox_system
+# -----------------------------------------------------------------------------
+add_library(kernox_system STATIC
+    src/modules/system/telemetry.cpp
+    src/modules/system/process_manager.cpp
+    src/modules/system/ipc.cpp
+    src/modules/system/shared_memory.cpp
+)
+
+target_include_directories(kernox_system PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+
+target_link_libraries(kernox_system PUBLIC
+    kernox_core
+    kernox_compiler_flags
+)
+
+# -----------------------------------------------------------------------------
 # CLI Library: kernox_cli
 # -----------------------------------------------------------------------------
 add_library(kernox_cli STATIC
@@ -128,6 +148,7 @@ target_include_directories(kernox_cli PUBLIC
 )
 
 target_link_libraries(kernox_cli PUBLIC
+    kernox_system
     kernox_sim
     kernox_core
     kernox_compiler_flags
@@ -142,6 +163,7 @@ add_executable(kernox
 
 target_link_libraries(kernox PRIVATE
     kernox_cli
+    kernox_system
     kernox_sim
     kernox_core
     kernox_compiler_flags

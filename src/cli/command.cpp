@@ -8,10 +8,18 @@
 #include "kernox/modules/sim/disk_sched.hpp"
 #include "kernox/modules/sim/deadlock.hpp"
 #include "kernox/modules/sim/memory.hpp"
+#include "kernox/modules/system/telemetry.hpp"
+#include "kernox/modules/system/process_manager.hpp"
+#include "kernox/modules/system/ipc.hpp"
+#include "kernox/modules/system/shared_memory.hpp"
 
+#include <cstring>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <sys/mman.h>
 #include <sys/utsname.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <vector>
 
@@ -28,7 +36,39 @@ void CommandDispatcher::print_help() {
               << "  schedule, sched  Run CPU scheduling algorithm simulation\n"
               << "  disk             Run disk-head scheduling simulation (FCFS, SSTF, SCAN, etc.)\n"
               << "  deadlock         Run deadlock simulation (Banker's, detection, RAG cycles)\n"
-              << "  memory, mem      Run memory management simulation (allocation, paging, replacement)\n\n"
+              << "  memory, mem      Run memory management simulation (allocation, paging, replacement)\n"
+              << "  process, proc    Manage POSIX processes, resource limits, and telemetry\n"
+              << "  ipc              High-performance Linux IPC (anonymous pipes, named FIFOs, shared memory, benchmarks)\n\n"
+              << "IPC Options (kernox ipc <subcommand> [options]):\n"
+              << "  pipe [options]       Benchmark anonymous pipe throughput and round-trip latency\n"
+              << "      --size <bytes>   Payload size in bytes (default: 1024)\n"
+              << "      --count <num>    Message transfer iterations (default: 100)\n"
+              << "      --timeout <ms>   Transfer timeout in milliseconds (default: 5000)\n"
+              << "      --verify         Verify binary payload integrity\n"
+              << "  fifo [options]       Benchmark named FIFO throughput and round-trip latency\n"
+              << "      --dir <path>     Directory for temporary FIFOs (default: /tmp)\n"
+              << "      --size <bytes>   Payload size in bytes (default: 1024)\n"
+              << "      --count <num>    Message transfer iterations (default: 100)\n"
+              << "      --timeout <ms>   Transfer timeout in milliseconds (default: 5000)\n"
+              << "      --verify         Verify binary payload integrity\n"
+              << "  shm [options]        Demonstrate POSIX shared memory cross-process communication\n"
+              << "      --name <str>     Shared memory object name (default: /kernox_shm_demo)\n"
+              << "      --size <bytes>   Shared memory size in bytes (default: 4096)\n"
+              << "  benchmark [options]  Run comprehensive IPC performance benchmark suite\n"
+              << "      --type <type>    IPC mechanism: pipe | fifo | all (default: all)\n"
+              << "      --sizes <csv>    Payload sizes in bytes (default: 64,1024,4096,65536,1048576)\n"
+              << "      --iterations <n> Base iteration count (default: 500)\n"
+              << "      --warmup <n>     Warmup iteration count (default: 20)\n"
+              << "      --dir <path>     Directory for temporary FIFOs (default: /tmp)\n\n"
+              << "Process Management Options (kernox process <subcommand> [options]):\n"
+              << "  run [options] <executable> [args...] Execute and monitor process with resource limits\n"
+              << "      --timeout <ms>       Execution timeout in milliseconds\n"
+              << "      --grace <ms>         Grace period between SIGTERM and SIGKILL (default: 200ms)\n"
+              << "      --cpu-limit <sec>    CPU time limit in seconds (RLIMIT_CPU)\n"
+              << "      --as-limit <bytes>   Address space memory limit in bytes (RLIMIT_AS)\n"
+              << "      --nofile-limit <num> Maximum open file descriptors (RLIMIT_NOFILE)\n"
+              << "      --fsize-limit <bytes> Maximum file size in bytes (RLIMIT_FSIZE)\n"
+              << "  stat <pid>               Inspect live /proc/<pid>/stat telemetry\n\n"
               << "CPU Scheduling Options (kernox schedule [options]):\n"
               << "  --algorithm, -a <name>  Algorithm: fcfs | sjf | srtf | rr | priority | mlfq\n"
               << "  --workload, -w <name>   Workload:  basic | arrivals | priority-demo\n"
@@ -53,11 +93,14 @@ void CommandDispatcher::print_help() {
               << "  replace  --algorithm <fifo|lru|optimal> --workload page-reference-demo [--frames <num>]\n"
               << "  ws       --workload page-reference-demo [--window <num>]\n\n"
               << "Examples:\n"
+              << "  kernox process run /bin/echo Hello KERNOX\n"
+              << "  kernox process run --timeout 500 /bin/sleep 2\n"
+              << "  kernox process stat 1\n"
               << "  kernox memory allocate --algorithm first-fit --workload allocation-demo\n"
               << "  kernox memory paging --workload paging-demo\n"
               << "  kernox memory translate --process 0 --address 4096 --workload paging-demo\n"
               << "  kernox memory replace --algorithm lru --workload page-reference-demo --frames 3\n\n"
-              << "Documentation: docs/CPU_SCHEDULING.md, docs/DISK_SCHEDULING.md, docs/DEADLOCK_MANAGEMENT.md, docs/MEMORY_MANAGEMENT.md\n";
+              << "Documentation: docs/PROCESS_MANAGEMENT.md, docs/SYSTEM_TELEMETRY.md, docs/CPU_SCHEDULING.md, docs/DISK_SCHEDULING.md\n";
 }
 
 void CommandDispatcher::print_version() {
@@ -69,13 +112,14 @@ int CommandDispatcher::execute_status() {
     std::cout << "=========================================================\n"
               << "                KERNOX SYSTEM STATUS REPORT              \n"
               << "=========================================================\n"
-              << "Phase: Milestone 0 / Phase 2 (Scaffolding & Core Foundations)\n\n"
+              << "Phase: Milestone 0 / Phase 4A.1 (Scaffolding & System Telemetry)\n\n"
               << "Active Foundation Utilities:\n"
               << "  [OK] Error & Result<T, Error>  - Type-safe error handling\n"
               << "  [OK] UniqueFd                  - RAII POSIX descriptor manager\n"
               << "  [OK] ChildProcess              - Safe process lifecycle controller\n"
               << "  [OK] Monotonic Timer           - std::chrono::steady_clock benchmark timer\n"
               << "  [OK] Structured Logger         - Thread-safe severity logger\n"
+              << "  [OK] System Telemetry          - Linux /proc live resource monitor\n"
               << "  [OK] Command Dispatcher        - Modular CLI entry point\n\n";
 
     struct utsname sys_info{};
@@ -88,9 +132,67 @@ int CommandDispatcher::execute_status() {
                   << "  Architecture     : " << sys_info.machine << "\n\n";
     }
 
-    std::cout << "Notice: Real system telemetry (/proc parsers, CPU load, memory stats)\n"
-              << "        and algorithmic simulation engines will be activated in\n"
-              << "        subsequent milestones per docs/TECHNICAL_DESIGN.md.\n"
+    kernox::system::SystemTelemetry telemetry;
+    auto host = telemetry.collect_telemetry(std::chrono::milliseconds(100));
+
+    std::cout << "Live Host Telemetry (/proc):\n";
+
+    // CPU Utilization
+    std::cout << "  CPU Utilization  : ";
+    if (host.cpu_utilization_percent.is_ok()) {
+        std::cout << std::fixed << std::setprecision(2)
+                  << host.cpu_utilization_percent.value() << "% (sampled over 100ms)\n";
+    } else {
+        std::cout << "[UNAVAILABLE: " << host.cpu_utilization_percent.error().message << "]\n";
+    }
+
+    // Memory Info
+    std::cout << "  Memory Status    : ";
+    if (host.memory.is_ok()) {
+        const auto& mem = host.memory.value();
+        double total_mb = static_cast<double>(mem.total_bytes) / (1024.0 * 1024.0);
+        double used_mb = static_cast<double>(mem.used_bytes) / (1024.0 * 1024.0);
+        double avail_mb = static_cast<double>(mem.available_bytes) / (1024.0 * 1024.0);
+
+        std::cout << std::fixed << std::setprecision(2)
+                  << "Used " << used_mb << " MB / Total " << total_mb << " MB ("
+                  << mem.usage_percent << "%)\n"
+                  << "  Memory Available : " << std::fixed << std::setprecision(2)
+                  << avail_mb << " MB";
+        if (mem.used_fallback_available) {
+            std::cout << " (estimated via Free+Buffers+Cached)";
+        }
+        std::cout << "\n";
+    } else {
+        std::cout << "[UNAVAILABLE: " << host.memory.error().message << "]\n";
+    }
+
+    // Load Average
+    std::cout << "  Load Average     : ";
+    if (host.load_avg.is_ok()) {
+        const auto& la = host.load_avg.value();
+        std::cout << std::fixed << std::setprecision(2)
+                  << la.load_1min << " (1m), " << la.load_5min << " (5m), "
+                  << la.load_15min << " (15m)\n";
+    } else {
+        std::cout << "[UNAVAILABLE: " << host.load_avg.error().message << "]\n";
+    }
+
+    // System Uptime
+    std::cout << "  System Uptime    : ";
+    if (host.uptime.is_ok()) {
+        const auto& up = host.uptime.value();
+        uint64_t total_sec = static_cast<uint64_t>(up.uptime_seconds);
+        uint64_t hours = total_sec / 3600;
+        uint64_t mins = (total_sec % 3600) / 60;
+        uint64_t secs = total_sec % 60;
+        std::cout << hours << "h " << mins << "m " << secs << "s ("
+                  << std::fixed << std::setprecision(2) << up.uptime_seconds << "s)\n";
+    } else {
+        std::cout << "[UNAVAILABLE: " << host.uptime.error().message << "]\n";
+    }
+
+    std::cout << "\nNotice: Real system telemetry is now operational via Linux /proc.\n"
               << "=========================================================\n";
     return 0;
 }
@@ -176,6 +278,37 @@ int CommandDispatcher::execute_self_test() {
             }
         } else {
             std::cerr << "  [FAIL] Failed to spawn child process: " << proc_res.error().to_string() << "\n";
+        }
+    }
+
+    // Test 5: System Telemetry Parser
+    total++;
+    {
+        const std::string mem_sample = "MemTotal: 4000000 kB\nMemAvailable: 3000000 kB\n";
+        auto mem_res = kernox::system::TelemetryParser::parse_proc_meminfo(mem_sample);
+        if (mem_res.is_ok() && mem_res.value().total_bytes == 4000000ULL * 1024ULL) {
+            std::cout << "  [PASS] Telemetry string parser and unit conversion\n";
+            passed++;
+        } else {
+            std::cerr << "  [FAIL] Telemetry parser validation failed\n";
+        }
+    }
+
+    // Test 6: ProcessManager Monitored Execution & wait4 Accounting
+    total++;
+    {
+        kernox::system::ProcessConfig pcfg;
+        pcfg.executable = "/usr/bin/true";
+        if (::access(pcfg.executable.c_str(), X_OK) != 0) {
+            pcfg.executable = "/bin/true";
+        }
+        pcfg.timeout = std::chrono::milliseconds(2000);
+        auto pm_res = kernox::system::ProcessManager::run(pcfg);
+        if (pm_res.is_ok() && pm_res.value().is_success() && pm_res.value().pid > 0) {
+            std::cout << "  [PASS] ProcessManager execution monitoring and wait4 accounting\n";
+            passed++;
+        } else {
+            std::cerr << "  [FAIL] ProcessManager self-test execution failed\n";
         }
     }
 
@@ -370,6 +503,22 @@ int CommandDispatcher::run(const std::vector<std::string>& args) {
             sub_args.assign(args.begin() + 1, args.end());
         }
         return execute_memory(sub_args);
+    }
+
+    if (args[0] == "process" || args[0] == "proc") {
+        std::vector<std::string> sub_args;
+        if (args.size() > 1) {
+            sub_args.assign(args.begin() + 1, args.end());
+        }
+        return execute_process(sub_args);
+    }
+
+    if (args[0] == "ipc") {
+        std::vector<std::string> sub_args;
+        if (args.size() > 1) {
+            sub_args.assign(args.begin() + 1, args.end());
+        }
+        return execute_ipc(sub_args);
     }
 
     std::cerr << "kernox: unknown command '" << args[0] << "'\n"
@@ -1154,6 +1303,728 @@ int CommandDispatcher::execute_memory(const std::vector<std::string>& args) {
 
     std::cerr << "kernox memory: unknown subcommand '" << subcmd << "'\n"
               << "Try 'kernox memory --help' for available subcommands.\n";
+    return 1;
+}
+
+int CommandDispatcher::execute_process(const std::vector<std::string>& args) {
+    if (args.empty() || args[0] == "--help" || args[0] == "-h") {
+        std::cout << "KERNOX Process Management Subsystem\n"
+                  << "Usage: kernox process <subcommand> [options]\n\n"
+                  << "Subcommands:\n"
+                  << "  run [options] <executable> [args...]  Execute and monitor process with resource limits\n"
+                  << "  stat <pid>                            Inspect live /proc/<pid>/stat telemetry\n\n"
+                  << "Run Options:\n"
+                  << "  --timeout <ms>         Wall-clock execution timeout in milliseconds\n"
+                  << "  --grace <ms>           Grace period between SIGTERM and SIGKILL (default: 200ms)\n"
+                  << "  --cpu-limit <sec>      CPU time limit in seconds (RLIMIT_CPU)\n"
+                  << "  --as-limit <bytes>     Address space limit in bytes (RLIMIT_AS)\n"
+                  << "  --nofile-limit <count> Max open file descriptors (RLIMIT_NOFILE)\n"
+                  << "  --fsize-limit <bytes>  Max file size created in bytes (RLIMIT_FSIZE)\n"
+                  << "  --                     Separator: all following tokens are treated as executable and arguments\n\n"
+                  << "Examples:\n"
+                  << "  kernox process run /bin/echo Hello KERNOX\n"
+                  << "  kernox process run --timeout 500 /bin/sleep 2\n"
+                  << "  kernox process stat 1\n";
+        return 0;
+    }
+
+    const std::string& subcmd = args[0];
+    if (subcmd == "stat") {
+        if (args.size() < 2 || args[1] == "--help" || args[1] == "-h") {
+            std::cout << "Usage: kernox process stat <pid>\n";
+            return (args.size() >= 2 && (args[1] == "--help" || args[1] == "-h")) ? 0 : 1;
+        }
+        char* endptr = nullptr;
+        long pid_val = std::strtol(args[1].c_str(), &endptr, 10);
+        if (*endptr != '\0' || pid_val <= 0) {
+            std::cerr << "kernox process stat: invalid process ID '" << args[1] << "'\n";
+            return 1;
+        }
+
+        auto stat_res = system::ProcessManager::read_process_stat(static_cast<pid_t>(pid_val));
+        if (stat_res.is_err()) {
+            std::cerr << "kernox process stat error: " << stat_res.error().to_string() << "\n";
+            return 1;
+        }
+
+        const auto& s = stat_res.value();
+        std::cout << "=========================================================\n"
+                  << "             KERNOX PROCESS TELEMETRY REPORT             \n"
+                  << "=========================================================\n"
+                  << "  PID              : " << s.pid << "\n"
+                  << "  Process Name     : " << s.comm << "\n"
+                  << "  State            : " << s.state << "\n"
+                  << "  PPID             : " << s.ppid << "\n"
+                  << "  User CPU Ticks   : " << s.utime_ticks << "\n"
+                  << "  System CPU Ticks : " << s.stime_ticks << "\n"
+                  << "  Virtual Memory   : " << s.vsize_bytes << " bytes ("
+                  << std::fixed << std::setprecision(2) << (static_cast<double>(s.vsize_bytes) / (1024.0 * 1024.0)) << " MB)\n"
+                  << "  Resident Pages   : " << s.rss_pages << " ("
+                  << (s.rss_pages * 4) << " KB)\n"
+                  << "=========================================================\n";
+        return 0;
+    }
+
+    if (subcmd == "run") {
+        if (args.size() < 2 || args[1] == "--help" || args[1] == "-h") {
+            std::cout << "Usage: kernox process run [options] <executable> [args...]\n"
+                      << "Try 'kernox process --help' for full option details.\n";
+            return (args.size() >= 2 && (args[1] == "--help" || args[1] == "-h")) ? 0 : 1;
+        }
+
+        system::ProcessConfig config{};
+        size_t idx = 1;
+        bool found_exe = false;
+
+        while (idx < args.size()) {
+            const auto& tok = args[idx];
+            if (tok == "--") {
+                ++idx;
+                break;
+            }
+            if (tok == "--timeout") {
+                if (idx + 1 >= args.size()) {
+                    std::cerr << "kernox process run: missing value for --timeout\n";
+                    return 1;
+                }
+                char* ep = nullptr;
+                long long val = std::strtoll(args[++idx].c_str(), &ep, 10);
+                if (*ep != '\0' || val <= 0) {
+                    std::cerr << "kernox process run: invalid timeout value '" << args[idx] << "'\n";
+                    return 1;
+                }
+                config.timeout = std::chrono::milliseconds(val);
+            } else if (tok == "--grace") {
+                if (idx + 1 >= args.size()) {
+                    std::cerr << "kernox process run: missing value for --grace\n";
+                    return 1;
+                }
+                char* ep = nullptr;
+                long long val = std::strtoll(args[++idx].c_str(), &ep, 10);
+                if (*ep != '\0' || val < 0) {
+                    std::cerr << "kernox process run: invalid grace period value '" << args[idx] << "'\n";
+                    return 1;
+                }
+                config.grace_period = std::chrono::milliseconds(val);
+            } else if (tok == "--cpu-limit") {
+                if (idx + 1 >= args.size()) {
+                    std::cerr << "kernox process run: missing value for --cpu-limit\n";
+                    return 1;
+                }
+                char* ep = nullptr;
+                unsigned long long val = std::strtoull(args[++idx].c_str(), &ep, 10);
+                if (*ep != '\0') {
+                    std::cerr << "kernox process run: invalid --cpu-limit value '" << args[idx] << "'\n";
+                    return 1;
+                }
+                config.limits.cpu_time_seconds = val;
+            } else if (tok == "--as-limit") {
+                if (idx + 1 >= args.size()) {
+                    std::cerr << "kernox process run: missing value for --as-limit\n";
+                    return 1;
+                }
+                char* ep = nullptr;
+                unsigned long long val = std::strtoull(args[++idx].c_str(), &ep, 10);
+                if (*ep != '\0') {
+                    std::cerr << "kernox process run: invalid --as-limit value '" << args[idx] << "'\n";
+                    return 1;
+                }
+                config.limits.address_space_bytes = val;
+            } else if (tok == "--nofile-limit") {
+                if (idx + 1 >= args.size()) {
+                    std::cerr << "kernox process run: missing value for --nofile-limit\n";
+                    return 1;
+                }
+                char* ep = nullptr;
+                unsigned long long val = std::strtoull(args[++idx].c_str(), &ep, 10);
+                if (*ep != '\0') {
+                    std::cerr << "kernox process run: invalid --nofile-limit value '" << args[idx] << "'\n";
+                    return 1;
+                }
+                config.limits.max_open_files = val;
+            } else if (tok == "--fsize-limit") {
+                if (idx + 1 >= args.size()) {
+                    std::cerr << "kernox process run: missing value for --fsize-limit\n";
+                    return 1;
+                }
+                char* ep = nullptr;
+                unsigned long long val = std::strtoull(args[++idx].c_str(), &ep, 10);
+                if (*ep != '\0') {
+                    std::cerr << "kernox process run: invalid --fsize-limit value '" << args[idx] << "'\n";
+                    return 1;
+                }
+                config.limits.max_file_size_bytes = val;
+            } else if (!tok.empty() && tok[0] == '-') {
+                std::cerr << "kernox process run: unknown option '" << tok << "'\n";
+                return 1;
+            } else {
+                found_exe = true;
+                config.executable = tok;
+                ++idx;
+                break;
+            }
+            ++idx;
+        }
+
+        if (!found_exe && idx < args.size()) {
+            config.executable = args[idx++];
+            found_exe = true;
+        }
+
+        if (!found_exe || config.executable.empty()) {
+            std::cerr << "kernox process run: no executable specified\n";
+            return 1;
+        }
+
+        while (idx < args.size()) {
+            config.arguments.push_back(args[idx++]);
+        }
+
+        auto exec_res = system::ProcessManager::run(config);
+        if (exec_res.is_err()) {
+            std::cerr << "kernox process error: " << exec_res.error().to_string() << "\n";
+            return 1;
+        }
+
+        const auto& res = exec_res.value();
+        std::cout << "=========================================================\n"
+                  << "             KERNOX PROCESS EXECUTION REPORT             \n"
+                  << "=========================================================\n"
+                  << "  Executable       : " << config.executable << "\n"
+                  << "  Arguments Count  : " << config.arguments.size() << "\n";
+        if (!config.arguments.empty()) {
+            std::cout << "  Arguments        : ";
+            for (size_t i = 0; i < config.arguments.size(); ++i) {
+                if (i > 0) std::cout << " ";
+                std::cout << "[" << config.arguments[i] << "]";
+            }
+            std::cout << "\n";
+        }
+        std::cout << "  PID              : " << res.pid << "\n"
+                  << "  Outcome          : ";
+        if (res.timed_out) {
+            std::cout << "TIMED OUT";
+            if (res.signaled) {
+                std::cout << " (Terminated by signal " << res.term_signal << ")";
+            }
+        } else if (res.exited) {
+            std::cout << "Exited with code " << res.exit_code;
+        } else if (res.signaled) {
+            std::cout << "Killed by signal " << res.term_signal;
+        }
+        std::cout << "\n";
+
+        double duration_ms = static_cast<double>(res.wall_clock_duration.count()) / 1000.0;
+        std::cout << "  Wall Duration    : " << res.wall_clock_duration.count() << " us ("
+                  << std::fixed << std::setprecision(2) << duration_ms << " ms)\n"
+                  << "Resource Accounting (wait4):\n"
+                  << "  User CPU Time    : " << res.resource_usage.user_cpu_time_us << " us\n"
+                  << "  System CPU Time  : " << res.resource_usage.system_cpu_time_us << " us\n"
+                  << "  Max RSS          : " << res.resource_usage.max_rss_kb << " KB\n"
+                  << "  Minor Faults     : " << res.resource_usage.minor_page_faults << "\n"
+                  << "  Major Faults     : " << res.resource_usage.major_page_faults << "\n"
+                  << "  Voluntary CS     : " << res.resource_usage.voluntary_context_switches << "\n"
+                  << "  Involuntary CS   : " << res.resource_usage.involuntary_context_switches << "\n"
+                  << "=========================================================\n";
+
+        if (res.timed_out) {
+            return 124;
+        }
+        if (res.signaled) {
+            return 128 + res.term_signal;
+        }
+        return res.exit_code;
+    }
+
+    std::cerr << "kernox process: unknown subcommand '" << subcmd << "'\n"
+              << "Try 'kernox process --help' for available subcommands.\n";
+    return 1;
+}
+
+int CommandDispatcher::execute_ipc(const std::vector<std::string>& args) {
+    if (args.empty() || args[0] == "--help" || args[0] == "-h") {
+        std::cout << "Usage: kernox ipc <subcommand> [options]\n\n"
+                  << "Subcommands:\n"
+                  << "  pipe        Benchmark anonymous pipe throughput and round-trip latency\n"
+                  << "  fifo        Benchmark named FIFO throughput and round-trip latency\n"
+                  << "  shm         Demonstrate POSIX shared memory cross-process communication\n"
+                  << "  benchmark   Run comprehensive benchmark suite across multiple payload sizes\n\n"
+                  << "Pipe & FIFO Options:\n"
+                  << "  --size <bytes>       Payload size in bytes (default: 1024)\n"
+                  << "  --count <num>        Message count / iterations (default: 100)\n"
+                  << "  --timeout <ms>       Transfer timeout in milliseconds (default: 5000)\n"
+                  << "  --verify             Enable binary payload content verification\n"
+                  << "  --dir <path>         (FIFO only) Directory for temporary FIFOs (default: /tmp)\n\n"
+                  << "Shared Memory Options:\n"
+                  << "  --name <str>         Shared memory object name (default: /kernox_shm_demo)\n"
+                  << "  --size <bytes>       Shared memory size in bytes (default: 4096)\n\n"
+                  << "Benchmark Options:\n"
+                  << "  --type <type>        pipe | fifo | all (default: all)\n"
+                  << "  --sizes <csv>        Comma-separated payload sizes in bytes\n"
+                  << "  --iterations <num>   Base iteration count (default: 500)\n"
+                  << "  --warmup <num>       Warmup iteration count (default: 20)\n"
+                  << "  --dir <path>         Directory for temporary FIFOs (default: /tmp)\n";
+        return 0;
+    }
+
+    const std::string& subcmd = args[0];
+
+    if (subcmd == "pipe" || subcmd == "fifo") {
+        size_t size = 1024;
+        size_t count = 100;
+        std::chrono::milliseconds timeout(5000);
+        bool verify = false;
+        std::string fifo_dir = "/tmp";
+
+        for (size_t i = 1; i < args.size(); ++i) {
+            const auto& arg = args[i];
+            if (arg == "--size" || arg == "-s") {
+                if (i + 1 >= args.size()) {
+                    std::cerr << "kernox ipc " << subcmd << ": missing argument for " << arg << "\n";
+                    return 1;
+                }
+                try {
+                    long long val = std::stoll(args[++i]);
+                    if (val <= 0) {
+                        std::cerr << "kernox ipc: payload size must be positive (> 0)\n";
+                        return 1;
+                    }
+                    size = static_cast<size_t>(val);
+                } catch (...) {
+                    std::cerr << "kernox ipc: invalid payload size: " << args[i] << "\n";
+                    return 1;
+                }
+            } else if (arg == "--count" || arg == "-c" || arg == "--iterations" || arg == "-n") {
+                if (i + 1 >= args.size()) {
+                    std::cerr << "kernox ipc " << subcmd << ": missing argument for " << arg << "\n";
+                    return 1;
+                }
+                try {
+                    long long val = std::stoll(args[++i]);
+                    if (val <= 0) {
+                        std::cerr << "kernox ipc: count must be positive (> 0)\n";
+                        return 1;
+                    }
+                    count = static_cast<size_t>(val);
+                } catch (...) {
+                    std::cerr << "kernox ipc: invalid count: " << args[i] << "\n";
+                    return 1;
+                }
+            } else if (arg == "--timeout" || arg == "-t") {
+                if (i + 1 >= args.size()) {
+                    std::cerr << "kernox ipc " << subcmd << ": missing argument for " << arg << "\n";
+                    return 1;
+                }
+                try {
+                    long long val = std::stoll(args[++i]);
+                    if (val <= 0) {
+                        std::cerr << "kernox ipc: timeout must be positive (> 0)\n";
+                        return 1;
+                    }
+                    timeout = std::chrono::milliseconds(val);
+                } catch (...) {
+                    std::cerr << "kernox ipc: invalid timeout: " << args[i] << "\n";
+                    return 1;
+                }
+            } else if (arg == "--verify") {
+                verify = true;
+            } else if (arg == "--dir" || arg == "-d") {
+                if (i + 1 >= args.size()) {
+                    std::cerr << "kernox ipc " << subcmd << ": missing argument for " << arg << "\n";
+                    return 1;
+                }
+                fifo_dir = args[++i];
+            } else if (arg == "--help" || arg == "-h") {
+                std::cout << "Usage: kernox ipc " << subcmd << " [--size <bytes>] [--count <num>] [--timeout <ms>] [--verify]\n";
+                return 0;
+            } else {
+                std::cerr << "kernox ipc " << subcmd << ": unknown option '" << arg << "'\n";
+                return 1;
+            }
+        }
+
+        system::IpcTransferConfig config{size, count, timeout, verify};
+        std::cout << "=========================================================\n"
+                  << "  KERNOX IPC " << (subcmd == "pipe" ? "ANONYMOUS PIPE" : "NAMED FIFO") << " BENCHMARK\n"
+                  << "=========================================================\n"
+                  << "Configuration:\n"
+                  << "  Payload Size : " << size << " bytes\n"
+                  << "  Iterations   : " << count << "\n"
+                  << "  Verification : " << (verify ? "Enabled" : "Disabled") << "\n";
+        if (subcmd == "fifo") {
+            std::cout << "  FIFO Path    : " << fifo_dir << "\n";
+        }
+        std::cout << "\nRunning steady-state throughput benchmark...\n";
+
+        core::Result<system::ThroughputResult> tp_res = (subcmd == "pipe")
+            ? system::run_pipe_throughput_benchmark(config, 10)
+            : system::run_fifo_throughput_benchmark(fifo_dir, config, 10);
+
+        if (tp_res.is_err()) {
+            std::cerr << "[ERROR] Throughput benchmark failed: " << tp_res.error().to_string() << "\n";
+            return 1;
+        }
+
+        std::cout << "Running ping-pong round-trip latency benchmark...\n";
+
+        core::Result<system::LatencyResult> lat_res = (subcmd == "pipe")
+            ? system::run_pipe_latency_benchmark(config, 10)
+            : system::run_fifo_latency_benchmark(fifo_dir, config, 10);
+
+        if (lat_res.is_err()) {
+            std::cerr << "[ERROR] Latency benchmark failed: " << lat_res.error().to_string() << "\n";
+            return 1;
+        }
+
+        const auto& tp = tp_res.value();
+        const auto& lat = lat_res.value();
+
+        std::cout << "\nThroughput Measurement (One-Way Streaming):\n"
+                  << "  Total Transferred : " << tp.total_bytes << " bytes ("
+                  << std::fixed << std::setprecision(2)
+                  << (static_cast<double>(tp.total_bytes) / (1024.0 * 1024.0)) << " MiB)\n"
+                  << "  Elapsed Duration  : " << (static_cast<double>(tp.elapsed_duration.count()) / 1000.0) << " ms\n"
+                  << "  Throughput        : " << std::fixed << std::setprecision(2) << tp.throughput_mib_s << " MiB/s\n"
+                  << "  Message Rate      : " << std::fixed << std::setprecision(0) << tp.messages_per_sec << " msg/sec\n"
+                  << "  Data Integrity    : " << (tp.data_verified ? "[PASS]" : "[FAIL]") << "\n\n"
+                  << "Latency Measurement (Round-Trip Ping-Pong):\n"
+                  << "  Avg Round-Trip    : " << std::fixed << std::setprecision(2) << lat.avg_round_trip_us << " us\n"
+                  << "  Min Round-Trip    : " << std::fixed << std::setprecision(2) << lat.min_round_trip_us << " us\n"
+                  << "  p50 Round-Trip    : " << std::fixed << std::setprecision(2) << lat.p50_round_trip_us << " us\n"
+                  << "  p99 Round-Trip    : " << std::fixed << std::setprecision(2) << lat.p99_round_trip_us << " us\n"
+                  << "  Max Round-Trip    : " << std::fixed << std::setprecision(2) << lat.max_round_trip_us << " us\n"
+                  << "  Data Integrity    : " << (lat.data_verified ? "[PASS]" : "[FAIL]") << "\n"
+                  << "=========================================================\n";
+        return 0;
+    }
+
+    if (subcmd == "benchmark" || subcmd == "bench") {
+        std::string type = "all";
+        std::string fifo_dir = "/tmp";
+        size_t iterations = 500;
+        size_t warmup = 20;
+        std::vector<size_t> custom_sizes;
+
+        for (size_t i = 1; i < args.size(); ++i) {
+            const auto& arg = args[i];
+            if (arg == "--type" || arg == "-t") {
+                if (i + 1 >= args.size()) {
+                    std::cerr << "kernox ipc benchmark: missing argument for " << arg << "\n";
+                    return 1;
+                }
+                type = args[++i];
+                if (type != "pipe" && type != "fifo" && type != "all") {
+                    std::cerr << "kernox ipc benchmark: invalid type '" << type << "' (expected pipe, fifo, or all)\n";
+                    return 1;
+                }
+            } else if (arg == "--iterations" || arg == "-n") {
+                if (i + 1 >= args.size()) {
+                    std::cerr << "kernox ipc benchmark: missing argument for " << arg << "\n";
+                    return 1;
+                }
+                try {
+                    long long val = std::stoll(args[++i]);
+                    if (val <= 0) {
+                        std::cerr << "kernox ipc benchmark: iterations must be positive\n";
+                        return 1;
+                    }
+                    iterations = static_cast<size_t>(val);
+                } catch (...) {
+                    std::cerr << "kernox ipc benchmark: invalid iterations: " << args[i] << "\n";
+                    return 1;
+                }
+            } else if (arg == "--warmup" || arg == "-w") {
+                if (i + 1 >= args.size()) {
+                    std::cerr << "kernox ipc benchmark: missing argument for " << arg << "\n";
+                    return 1;
+                }
+                try {
+                    long long val = std::stoll(args[++i]);
+                    if (val < 0) {
+                        std::cerr << "kernox ipc benchmark: warmup must be non-negative\n";
+                        return 1;
+                    }
+                    warmup = static_cast<size_t>(val);
+                } catch (...) {
+                    std::cerr << "kernox ipc benchmark: invalid warmup: " << args[i] << "\n";
+                    return 1;
+                }
+            } else if (arg == "--sizes" || arg == "-s") {
+                if (i + 1 >= args.size()) {
+                    std::cerr << "kernox ipc benchmark: missing argument for " << arg << "\n";
+                    return 1;
+                }
+                std::stringstream ss(args[++i]);
+                std::string item;
+                custom_sizes.clear();
+                while (std::getline(ss, item, ',')) {
+                    if (!item.empty()) {
+                        try {
+                            custom_sizes.push_back(std::stoull(item));
+                        } catch (...) {
+                            std::cerr << "kernox ipc benchmark: invalid size in list: '" << item << "'\n";
+                            return 1;
+                        }
+                    }
+                }
+            } else if (arg == "--dir" || arg == "-d") {
+                if (i + 1 >= args.size()) {
+                    std::cerr << "kernox ipc benchmark: missing argument for " << arg << "\n";
+                    return 1;
+                }
+                fifo_dir = args[++i];
+            } else if (arg == "--help" || arg == "-h") {
+                std::cout << "Usage: kernox ipc benchmark [--type <pipe|fifo|all>] [--sizes <csv>] [--iterations <n>] [--warmup <n>]\n";
+                return 0;
+            } else {
+                std::cerr << "kernox ipc benchmark: unknown option '" << arg << "'\n";
+                return 1;
+            }
+        }
+
+        std::cout << "=========================================================================================\n"
+                  << "                  KERNOX LINUX IPC PERFORMANCE BENCHMARK SUITE                           \n"
+                  << "=========================================================================================\n"
+                  << "Benchmark Mode: " << type << " | Warmup: " << warmup << " iters | Base Iterations: " << iterations << "\n\n";
+
+        auto suite_res = system::run_ipc_benchmark_suite(type, custom_sizes, iterations, warmup, fifo_dir);
+        if (suite_res.is_err()) {
+            std::cerr << "[ERROR] Benchmark suite failed: " << suite_res.error().to_string() << "\n";
+            return 1;
+        }
+
+        const auto& suite = suite_res.value();
+
+        std::cout << "---------------------------------------------------------------------------------------------------\n"
+                  << "  THROUGHPUT BENCHMARK (One-Way Streaming)\n"
+                  << "---------------------------------------------------------------------------------------------------\n"
+                  << std::left << std::setw(10) << "Type"
+                  << std::left << std::setw(12) << "Payload"
+                  << std::right << std::setw(12) << "Iterations"
+                  << std::right << std::setw(14) << "Total (MiB)"
+                  << std::right << std::setw(14) << "Elapsed (ms)"
+                  << std::right << std::setw(18) << "Throughput (MiB/s)"
+                  << std::right << std::setw(16) << "Msg/sec"
+                  << "\n---------------------------------------------------------------------------------------------------\n";
+
+        size_t n_sizes = custom_sizes.empty() ? 5 : custom_sizes.size();
+        for (size_t i = 0; i < suite.throughput_results.size(); ++i) {
+            const auto& tp = suite.throughput_results[i];
+            std::string mech = (suite.ipc_type == "pipe") ? "Pipe" :
+                               (suite.ipc_type == "fifo") ? "FIFO" :
+                               (i < n_sizes ? "Pipe" : "FIFO");
+
+            std::string sz_str = std::to_string(tp.payload_size) + " B";
+            if (tp.payload_size >= 1048576) {
+                sz_str = std::to_string(tp.payload_size / 1048576) + " MiB";
+            } else if (tp.payload_size >= 1024) {
+                sz_str = std::to_string(tp.payload_size / 1024) + " KiB";
+            }
+
+            double mib = static_cast<double>(tp.total_bytes) / (1024.0 * 1024.0);
+            double ms = static_cast<double>(tp.elapsed_duration.count()) / 1000.0;
+
+            std::cout << std::left << std::setw(10) << mech
+                      << std::left << std::setw(12) << sz_str
+                      << std::right << std::setw(12) << tp.iterations
+                      << std::right << std::setw(14) << std::fixed << std::setprecision(2) << mib
+                      << std::right << std::setw(14) << std::fixed << std::setprecision(2) << ms
+                      << std::right << std::setw(18) << std::fixed << std::setprecision(2) << tp.throughput_mib_s
+                      << std::right << std::setw(16) << std::fixed << std::setprecision(0) << tp.messages_per_sec
+                      << "\n";
+        }
+
+        std::cout << "\n---------------------------------------------------------------------------------------------------\n"
+                  << "  LATENCY BENCHMARK (Round-Trip Ping-Pong RTT)\n"
+                  << "---------------------------------------------------------------------------------------------------\n"
+                  << std::left << std::setw(10) << "Type"
+                  << std::left << std::setw(12) << "Payload"
+                  << std::right << std::setw(12) << "Iterations"
+                  << std::right << std::setw(14) << "Avg RTT (us)"
+                  << std::right << std::setw(14) << "Min RTT (us)"
+                  << std::right << std::setw(14) << "p50 RTT (us)"
+                  << std::right << std::setw(14) << "p99 RTT (us)"
+                  << std::right << std::setw(14) << "Max RTT (us)"
+                  << "\n---------------------------------------------------------------------------------------------------\n";
+
+        for (size_t i = 0; i < suite.latency_results.size(); ++i) {
+            const auto& lat = suite.latency_results[i];
+            std::string mech = (suite.ipc_type == "pipe") ? "Pipe" :
+                               (suite.ipc_type == "fifo") ? "FIFO" :
+                               (i < n_sizes ? "Pipe" : "FIFO");
+
+            std::string sz_str = std::to_string(lat.payload_size) + " B";
+            if (lat.payload_size >= 1048576) {
+                sz_str = std::to_string(lat.payload_size / 1048576) + " MiB";
+            } else if (lat.payload_size >= 1024) {
+                sz_str = std::to_string(lat.payload_size / 1024) + " KiB";
+            }
+
+            std::cout << std::left << std::setw(10) << mech
+                      << std::left << std::setw(12) << sz_str
+                      << std::right << std::setw(12) << lat.iterations
+                      << std::right << std::setw(14) << std::fixed << std::setprecision(2) << lat.avg_round_trip_us
+                      << std::right << std::setw(14) << std::fixed << std::setprecision(2) << lat.min_round_trip_us
+                      << std::right << std::setw(14) << std::fixed << std::setprecision(2) << lat.p50_round_trip_us
+                      << std::right << std::setw(14) << std::fixed << std::setprecision(2) << lat.p99_round_trip_us
+                      << std::right << std::setw(14) << std::fixed << std::setprecision(2) << lat.max_round_trip_us
+                      << "\n";
+        }
+
+        std::cout << "=========================================================================================\n"
+                  << "Notice: Round-trip latency measures complete end-to-end ping-pong response time.\n"
+                  << "        One-way throughput measures pure steady-state kernel pipe streaming bandwidth.\n"
+                  << "=========================================================================================\n";
+        return 0;
+    }
+
+    if (subcmd == "shm") {
+        std::string shm_name = "/kernox_shm_demo";
+        size_t shm_size = 4096;
+
+        for (size_t i = 1; i < args.size(); ++i) {
+            const auto& arg = args[i];
+            if (arg == "--name" || arg == "-n") {
+                if (i + 1 >= args.size()) {
+                    std::cerr << "kernox ipc shm: missing argument for " << arg << "\n";
+                    return 1;
+                }
+                shm_name = args[++i];
+            } else if (arg == "--size" || arg == "-s") {
+                if (i + 1 >= args.size()) {
+                    std::cerr << "kernox ipc shm: missing argument for " << arg << "\n";
+                    return 1;
+                }
+                try {
+                    long long val = std::stoll(args[++i]);
+                    if (val <= 0) {
+                        std::cerr << "kernox ipc shm: size must be positive (> 0)\n";
+                        return 1;
+                    }
+                    shm_size = static_cast<size_t>(val);
+                } catch (...) {
+                    std::cerr << "kernox ipc shm: invalid size: " << args[i] << "\n";
+                    return 1;
+                }
+            } else if (arg == "--help" || arg == "-h") {
+                std::cout << "Usage: kernox ipc shm [--name <name>] [--size <bytes>]\n\n"
+                          << "Options:\n"
+                          << "  --name, -n <name>   Shared memory object name starting with '/' (default: /kernox_shm_demo)\n"
+                          << "  --size, -s <bytes>  Shared memory mapping size in bytes (default: 4096)\n";
+                return 0;
+            } else {
+                std::cerr << "kernox ipc shm: unknown option '" << arg << "'\n";
+                return 1;
+            }
+        }
+
+        std::cout << "=========================================================\n"
+                  << "  KERNOX POSIX SHARED MEMORY CROSS-PROCESS DEMO          \n"
+                  << "=========================================================\n"
+                  << "Configuration:\n"
+                  << "  Object Name  : " << shm_name << "\n"
+                  << "  Mapping Size : " << shm_size << " bytes\n\n";
+
+        // Step 1: Create shared memory object in parent
+        std::cout << "[Step 1] Creating shared memory object in parent (PID " << ::getpid() << ")...\n";
+        // Clean up any stale object first
+        ::shm_unlink(shm_name.c_str());
+
+        auto shm_res = system::SharedMemory::create(shm_name, shm_size);
+        if (shm_res.is_err()) {
+            std::cerr << "[ERROR] Failed to create shared memory: " << shm_res.error().to_string() << "\n";
+            return 1;
+        }
+        auto& parent_shm = shm_res.value();
+        std::cout << "  -> Created and mapped at address: " << parent_shm.data()
+                  << " (FD: " << parent_shm.fd() << ", Size: " << parent_shm.size() << " bytes)\n";
+
+        struct DemoHeader {
+            uint32_t magic;
+            uint32_t writer_pid;
+            uint64_t timestamp_us;
+            char message[256];
+        };
+
+        if (shm_size < sizeof(DemoHeader)) {
+            std::cerr << "[ERROR] Shared memory size too small for demo header\n";
+            return 1;
+        }
+
+        auto* hdr = parent_shm.as<DemoHeader>();
+        hdr->magic = 0;
+        hdr->writer_pid = 0;
+        hdr->timestamp_us = 0;
+        std::memset(hdr->message, 0, sizeof(hdr->message));
+
+        // Step 2: Spawn child process to write into shared memory
+        std::cout << "\n[Step 2] Forking child process to write data into shared memory...\n";
+        pid_t pid = ::fork();
+        if (pid < 0) {
+            std::cerr << "[ERROR] fork() failed: " << std::strerror(errno) << "\n";
+            return 1;
+        }
+
+        if (pid == 0) {
+            // Child process: open existing shared memory
+            auto child_res = system::SharedMemory::open_existing(shm_name, sizeof(DemoHeader));
+            if (child_res.is_err()) {
+                ::_exit(1);
+            }
+            auto& child_shm = child_res.value();
+            auto* child_hdr = child_shm.as<DemoHeader>();
+            child_hdr->magic = 0x4B45524E; // "KERN"
+            child_hdr->writer_pid = static_cast<uint32_t>(::getpid());
+            child_hdr->timestamp_us = static_cast<uint64_t>(
+                std::chrono::duration_cast<std::chrono::microseconds>(
+                    std::chrono::steady_clock::now().time_since_epoch()).count());
+            const char msg[] = "POSIX shared memory message transmitted from worker child process!";
+            std::memcpy(child_hdr->message, msg, sizeof(msg));
+            ::_exit(0);
+        }
+
+        // Parent process: wait for child
+        int status = 0;
+        pid_t wr = 0;
+        do {
+            wr = ::waitpid(pid, &status, 0);
+        } while (wr < 0 && errno == EINTR);
+
+        if (wr != pid || !WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+            std::cerr << "[ERROR] Child process failed during shared memory write\n";
+            return 1;
+        }
+
+        // Step 3: Read and verify data in parent
+        std::cout << "\n[Step 3] Reading data written by child process in parent...\n";
+        std::cout << "  Magic Marker : 0x" << std::hex << std::uppercase << hdr->magic << std::dec << "\n"
+                  << "  Writer PID   : " << hdr->writer_pid << " (Child PID: " << pid << ")\n"
+                  << "  Timestamp    : " << hdr->timestamp_us << " us\n"
+                  << "  Payload      : \"" << hdr->message << "\"\n";
+
+        if (hdr->magic != 0x4B45524E || hdr->writer_pid != static_cast<uint32_t>(pid)) {
+            std::cerr << "[ERROR] Data verification failed in shared memory\n";
+            return 1;
+        }
+        std::cout << "  Verification : [PASS] Data verified successfully.\n";
+
+        // Step 4: Cleanup
+        std::cout << "\n[Step 4] Cleaning up shared memory object...\n";
+        auto unlink_res = parent_shm.unlink();
+        if (unlink_res.is_err()) {
+            std::cerr << "[ERROR] Failed to unlink shared memory: " << unlink_res.error().to_string() << "\n";
+            return 1;
+        }
+        std::cout << "  -> Object unlinked successfully via shm_unlink().\n"
+                  << "=========================================================\n"
+                  << "Notice: Shared memory provides direct zero-copy kernel memory mapping.\n"
+                  << "        Concurrent multi-process access requires external synchronization.\n"
+                  << "=========================================================\n";
+        return 0;
+    }
+
+    std::cerr << "kernox ipc: unknown subcommand '" << subcmd << "'\n"
+              << "Try 'kernox ipc --help' for available subcommands.\n";
     return 1;
 }
 

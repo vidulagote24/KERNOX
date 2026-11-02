@@ -690,7 +690,7 @@ The benchmarking engine (`src/bench/`) ensures scientific reproducibility:
 
 ### 8.2 Reliability, Safety, and Defensive Programming
 - **Fork-Bomb Defense:** Process manager enforces hard limits (`setrlimit(RLIMIT_NPROC)`), capping max child processes to a safe threshold (e.g., maximum 16 concurrent children).
-- **Zombie Prevention:** All child processes are tracked in an RAII `ChildProcess` registry. A dedicated signal handler and destructor safely reaps children using `waitpid(-1, &status, WNOHANG)`.
+- **Zombie Prevention:** Child processes are reaped through explicit, PID-scoped calls: `core::ChildProcess` uses its RAII destructor with `waitpid(pid, ...)`, while `system::ProcessManager` uses synchronous monitoring and `ProcessManager::reap_child()` with `wait4(pid, ...)`. Broad reaping via `waitpid(-1)` is strictly prohibited to maintain isolated process lifecycle ownership.
 - **Pipe Deadlock Prevention:** Anonymous pipe functions always ensure the unused read or write descriptor is closed in parent/child before blocking calls.
 - **Sanitizer Support:**
   - Build targets supporting AddressSanitizer (`-fsanitize=address`) and UndefinedBehaviorSanitizer (`-fsanitize=undefined`).

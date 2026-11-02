@@ -19,6 +19,8 @@ public:
     static int execute_disk_schedule(const std::vector<std::string>& args);
     static int execute_deadlock(const std::vector<std::string>& args);
     static int execute_memory(const std::vector<std::string>& args);
+    static int execute_process(const std::vector<std::string>& args);
+    static int execute_ipc(const std::vector<std::string>& args);
 };
 
 } // namespace kernox::cli
