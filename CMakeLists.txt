@@ -6,6 +6,8 @@ project(KERNOX
     LANGUAGES C CXX
 )
 
+find_package(Threads REQUIRED)
+
 # Standard C++ configuration
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -123,6 +125,10 @@ add_library(kernox_system STATIC
     src/modules/system/process_manager.cpp
     src/modules/system/ipc.cpp
     src/modules/system/shared_memory.cpp
+    src/modules/system/sync.cpp
+    src/modules/system/ring_buffer.cpp
+    src/modules/system/unix_socket.cpp
+    src/modules/system/message_queue.cpp
 )
 
 target_include_directories(kernox_system PUBLIC
@@ -133,6 +139,8 @@ target_include_directories(kernox_system PUBLIC
 target_link_libraries(kernox_system PUBLIC
     kernox_core
     kernox_compiler_flags
+    Threads::Threads
+    rt
 )
 
 # -----------------------------------------------------------------------------

@@ -356,6 +356,159 @@ core::Result<SystemUptime> TelemetryParser::parse_proc_uptime(std::string_view c
     return core::Result<SystemUptime>::ok(res);
 }
 
+core::Result<ProcessStatusInfo> TelemetryParser::parse_proc_status(std::string_view content, pid_t target_pid) {
+    if (content.empty()) {
+        return core::Result<ProcessStatusInfo>::err(
+            core::ErrorCode::InvalidArgument,
+            "Cannot parse empty /proc/<pid>/status content");
+    }
+
+    ProcessStatusInfo info{};
+    info.pid = target_pid;
+
+    std::istringstream stream{std::string(content)};
+    std::string line;
+
+    while (std::getline(stream, line)) {
+        auto colon_pos = line.find(':');
+        if (colon_pos == std::string::npos) {
+            continue;
+        }
+
+        std::string_view key = trim_sv(std::string_view(line).substr(0, colon_pos));
+        std::string_view val = trim_sv(std::string_view(line).substr(colon_pos + 1));
+
+        if (key == "Name") {
+            info.name = std::string(val);
+        } else if (key == "State") {
+            if (!val.empty()) {
+                info.state = val.front();
+                auto paren_start = val.find('(');
+                auto paren_end = val.find(')', paren_start);
+                if (paren_start != std::string_view::npos && paren_end != std::string_view::npos && paren_end > paren_start) {
+                    info.state_description = std::string(val.substr(paren_start + 1, paren_end - paren_start - 1));
+                }
+            }
+        } else if (key == "Pid") {
+            uint64_t v = 0;
+            if (parse_u64(val, v)) {
+                info.pid = static_cast<pid_t>(v);
+            }
+        } else if (key == "PPid") {
+            uint64_t v = 0;
+            if (parse_u64(val, v)) {
+                info.ppid = static_cast<pid_t>(v);
+            }
+        } else if (key == "TracerPid") {
+            uint64_t v = 0;
+            if (parse_u64(val, v)) {
+                info.tracer_pid = static_cast<pid_t>(v);
+            }
+        } else if (key == "Threads") {
+            uint64_t v = 0;
+            if (parse_u64(val, v)) {
+                info.threads = static_cast<uint32_t>(v);
+            }
+        } else if (key == "Uid") {
+            std::istringstream uid_stream{std::string(val)};
+            std::string t1, t2, t3, t4;
+            if (uid_stream >> t1 >> t2 >> t3 >> t4) {
+                uint64_t u1 = 0, u2 = 0, u3 = 0, u4 = 0;
+                if (parse_u64(t1, u1)) info.uid_real = static_cast<uid_t>(u1);
+                if (parse_u64(t2, u2)) info.uid_effective = static_cast<uid_t>(u2);
+                if (parse_u64(t3, u3)) info.uid_saved = static_cast<uid_t>(u3);
+                if (parse_u64(t4, u4)) info.uid_fs = static_cast<uid_t>(u4);
+            }
+        } else if (key == "Gid") {
+            std::istringstream gid_stream{std::string(val)};
+            std::string t1, t2, t3, t4;
+            if (gid_stream >> t1 >> t2 >> t3 >> t4) {
+                uint64_t g1 = 0, g2 = 0, g3 = 0, g4 = 0;
+                if (parse_u64(t1, g1)) info.gid_real = static_cast<gid_t>(g1);
+                if (parse_u64(t2, g2)) info.gid_effective = static_cast<gid_t>(g2);
+                if (parse_u64(t3, g3)) info.gid_saved = static_cast<gid_t>(g3);
+                if (parse_u64(t4, g4)) info.gid_fs = static_cast<gid_t>(g4);
+            }
+        } else if (key == "VmSize") {
+            auto kb_pos = val.find(" kB");
+            std::string_view num_part = (kb_pos != std::string_view::npos) ? val.substr(0, kb_pos) : val;
+            uint64_t kb = 0;
+            if (parse_u64(num_part, kb)) {
+                info.vm_size_bytes = kb * 1024ULL;
+            }
+        } else if (key == "VmRSS") {
+            auto kb_pos = val.find(" kB");
+            std::string_view num_part = (kb_pos != std::string_view::npos) ? val.substr(0, kb_pos) : val;
+            uint64_t kb = 0;
+            if (parse_u64(num_part, kb)) {
+                info.vm_rss_bytes = kb * 1024ULL;
+            }
+        } else if (key == "VmPeak") {
+            auto kb_pos = val.find(" kB");
+            std::string_view num_part = (kb_pos != std::string_view::npos) ? val.substr(0, kb_pos) : val;
+            uint64_t kb = 0;
+            if (parse_u64(num_part, kb)) {
+                info.vm_peak_bytes = kb * 1024ULL;
+            }
+        } else if (key == "VmSwap") {
+            auto kb_pos = val.find(" kB");
+            std::string_view num_part = (kb_pos != std::string_view::npos) ? val.substr(0, kb_pos) : val;
+            uint64_t kb = 0;
+            if (parse_u64(num_part, kb)) {
+                info.vm_swap_bytes = kb * 1024ULL;
+            }
+        } else if (key == "voluntary_ctxt_switches") {
+            parse_u64(val, info.voluntary_context_switches);
+        } else if (key == "nonvoluntary_ctxt_switches") {
+            parse_u64(val, info.nonvoluntary_context_switches);
+        }
+    }
+
+    return core::Result<ProcessStatusInfo>::ok(std::move(info));
+}
+
+core::Result<ProcessIoStat> TelemetryParser::parse_proc_io(std::string_view content, pid_t target_pid) {
+    if (content.empty()) {
+        return core::Result<ProcessIoStat>::err(
+            core::ErrorCode::InvalidArgument,
+            "Cannot parse empty /proc/<pid>/io content");
+    }
+
+    ProcessIoStat stat{};
+    stat.pid = target_pid;
+
+    std::istringstream stream{std::string(content)};
+    std::string line;
+
+    while (std::getline(stream, line)) {
+        auto colon_pos = line.find(':');
+        if (colon_pos == std::string::npos) {
+            continue;
+        }
+
+        std::string_view key = trim_sv(std::string_view(line).substr(0, colon_pos));
+        std::string_view val = trim_sv(std::string_view(line).substr(colon_pos + 1));
+
+        if (key == "rchar") {
+            parse_u64(val, stat.rchar);
+        } else if (key == "wchar") {
+            parse_u64(val, stat.wchar);
+        } else if (key == "syscr") {
+            parse_u64(val, stat.syscr);
+        } else if (key == "syscw") {
+            parse_u64(val, stat.syscw);
+        } else if (key == "read_bytes") {
+            parse_u64(val, stat.read_bytes);
+        } else if (key == "write_bytes") {
+            parse_u64(val, stat.write_bytes);
+        } else if (key == "cancelled_write_bytes") {
+            parse_u64(val, stat.cancelled_write_bytes);
+        }
+    }
+
+    return core::Result<ProcessIoStat>::ok(stat);
+}
+
 // -----------------------------------------------------------------------------
 // SystemTelemetry
 // -----------------------------------------------------------------------------
@@ -449,6 +602,44 @@ core::Result<SystemUptime> SystemTelemetry::read_uptime() const {
         return core::Result<SystemUptime>::err(file_res.error());
     }
     return TelemetryParser::parse_proc_uptime(file_res.value());
+}
+
+core::Result<ProcessStatusInfo> SystemTelemetry::read_process_status(pid_t pid, const std::string& proc_dir) const {
+    if (pid < 0) {
+        return core::Result<ProcessStatusInfo>::err(
+            core::ErrorCode::InvalidArgument,
+            "Target process ID must be non-negative: " + std::to_string(pid));
+    }
+    std::string path = proc_dir + "/" + std::to_string(pid) + "/status";
+    auto file_res = read_proc_file(path);
+    if (!file_res.is_ok()) {
+        return core::Result<ProcessStatusInfo>::err(file_res.error());
+    }
+    return TelemetryParser::parse_proc_status(file_res.value(), pid);
+}
+
+core::Result<ProcessIoStat> SystemTelemetry::read_process_io(pid_t pid, const std::string& proc_dir) const {
+    if (pid < 0) {
+        return core::Result<ProcessIoStat>::err(
+            core::ErrorCode::InvalidArgument,
+            "Target process ID must be non-negative: " + std::to_string(pid));
+    }
+    std::string path = proc_dir + "/" + std::to_string(pid) + "/io";
+    auto file_res = read_proc_file(path);
+    if (!file_res.is_ok()) {
+        return core::Result<ProcessIoStat>::err(file_res.error());
+    }
+    return TelemetryParser::parse_proc_io(file_res.value(), pid);
+}
+
+core::Result<ProcessStatusInfo> SystemTelemetry::get_process_status(pid_t pid, const std::string& proc_dir) {
+    SystemTelemetry t;
+    return t.read_process_status(pid, proc_dir);
+}
+
+core::Result<ProcessIoStat> SystemTelemetry::get_process_io(pid_t pid, const std::string& proc_dir) {
+    SystemTelemetry t;
+    return t.read_process_io(pid, proc_dir);
 }
 
 HostTelemetry SystemTelemetry::collect_telemetry(std::chrono::milliseconds cpu_sample_interval) const {

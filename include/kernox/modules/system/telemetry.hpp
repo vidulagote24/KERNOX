@@ -82,6 +82,55 @@ struct SystemUptime {
 };
 
 /**
+ * @brief Process status information parsed from Linux /proc/<pid>/status.
+ */
+struct ProcessStatusInfo {
+    pid_t pid{-1};
+    std::string name{};
+    char state{'?'};
+    std::string state_description{};
+    pid_t ppid{-1};
+    pid_t tracer_pid{-1};
+    uint32_t threads{0};
+
+    // User IDs: Real, Effective, Saved, Filesystem
+    uid_t uid_real{0};
+    uid_t uid_effective{0};
+    uid_t uid_saved{0};
+    uid_t uid_fs{0};
+
+    // Group IDs: Real, Effective, Saved, Filesystem
+    gid_t gid_real{0};
+    gid_t gid_effective{0};
+    gid_t gid_saved{0};
+    gid_t gid_fs{0};
+
+    // Memory (in bytes)
+    uint64_t vm_size_bytes{0};    // VmSize (kB * 1024)
+    uint64_t vm_rss_bytes{0};     // VmRSS (kB * 1024)
+    uint64_t vm_peak_bytes{0};    // VmPeak (kB * 1024)
+    uint64_t vm_swap_bytes{0};    // VmSwap (kB * 1024)
+
+    // Context switch counters
+    uint64_t voluntary_context_switches{0};
+    uint64_t nonvoluntary_context_switches{0};
+};
+
+/**
+ * @brief Process I/O accounting statistics parsed from Linux /proc/<pid>/io.
+ */
+struct ProcessIoStat {
+    pid_t pid{-1};
+    uint64_t rchar{0};                  // Characters read
+    uint64_t wchar{0};                  // Characters written
+    uint64_t syscr{0};                  // Read syscalls invoked
+    uint64_t syscw{0};                  // Write syscalls invoked
+    uint64_t read_bytes{0};             // Bytes read from storage layer
+    uint64_t write_bytes{0};            // Bytes written to storage layer
+    uint64_t cancelled_write_bytes{0};  // Truncated/cancelled write bytes
+};
+
+/**
  * @brief Aggregated host telemetry report.
  *
  * Each metric is stored as an independent Result<T> to guarantee that failure
@@ -155,6 +204,22 @@ public:
      * @return SystemUptime on success, or Error on malformed tokens.
      */
     static core::Result<SystemUptime> parse_proc_uptime(std::string_view content);
+
+    /**
+     * @brief Parses /proc/<pid>/status into ProcessStatusInfo.
+     * @param content Content of /proc/<pid>/status.
+     * @param pid Target process ID (or -1 if discovered from status content).
+     * @return ProcessStatusInfo on success, or Error on malformed content.
+     */
+    static core::Result<ProcessStatusInfo> parse_proc_status(std::string_view content, pid_t pid = -1);
+
+    /**
+     * @brief Parses /proc/<pid>/io into ProcessIoStat.
+     * @param content Content of /proc/<pid>/io.
+     * @param pid Target process ID.
+     * @return ProcessIoStat on success, or Error on malformed content.
+     */
+    static core::Result<ProcessIoStat> parse_proc_io(std::string_view content, pid_t pid = -1);
 };
 
 /**
@@ -179,6 +244,14 @@ public:
     [[nodiscard]] core::Result<MemoryInfo> read_memory_info() const;
     [[nodiscard]] core::Result<LoadAverage> read_load_average() const;
     [[nodiscard]] core::Result<SystemUptime> read_uptime() const;
+
+    // Process-level telemetry queries
+    [[nodiscard]] core::Result<ProcessStatusInfo> read_process_status(pid_t pid, const std::string& proc_dir = "/proc") const;
+    [[nodiscard]] core::Result<ProcessIoStat> read_process_io(pid_t pid, const std::string& proc_dir = "/proc") const;
+
+    // Static convenience helpers
+    static core::Result<ProcessStatusInfo> get_process_status(pid_t pid, const std::string& proc_dir = "/proc");
+    static core::Result<ProcessIoStat> get_process_io(pid_t pid, const std::string& proc_dir = "/proc");
 
     [[nodiscard]] HostTelemetry collect_telemetry(std::chrono::milliseconds cpu_sample_interval = std::chrono::milliseconds{100}) const;
 

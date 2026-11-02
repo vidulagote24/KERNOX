@@ -1,10 +1,10 @@
 # KERNOX Linux `/proc` System Telemetry
 
-**Subsystem:** Real POSIX Integration — Host System Telemetry  
-**Namespace:** `kernox::system` (aliased as `kernox::sys`)  
-**Header:** [`include/kernox/modules/system/telemetry.hpp`](file:///e:/KERNOX%28OS%20CP%29/include/kernox/modules/system/telemetry.hpp)  
-**Implementation:** [`src/modules/system/telemetry.cpp`](file:///e:/KERNOX%28OS%20CP%29/src/modules/system/telemetry.cpp)  
-**Test Suite:** [`tests/test_telemetry.cpp`](file:///e:/KERNOX%28OS%20CP%29/tests/test_telemetry.cpp)  
+**Subsystem:** Real POSIX Integration — Host System Telemetry
+**Namespace:** `kernox::system` (aliased as `kernox::sys`)
+**Header:** [`include/kernox/modules/system/telemetry.hpp`](file:///e:/KERNOX%28OS%20CP%29/include/kernox/modules/system/telemetry.hpp)
+**Implementation:** [`src/modules/system/telemetry.cpp`](file:///e:/KERNOX%28OS%20CP%29/src/modules/system/telemetry.cpp)
+**Test Suite:** [`tests/test_telemetry.cpp`](file:///e:/KERNOX%28OS%20CP%29/tests/test_telemetry.cpp)
 
 ---
 
@@ -12,11 +12,11 @@
 
 The System Telemetry subsystem provides non-invasive, production-grade observation of the host Linux operating system. In accordance with KERNOX's architectural principles, the module adheres to:
 
-1. **Strict Separation of Parsing and I/O:**  
+1. **Strict Separation of Parsing and I/O:**
    `TelemetryParser` provides pure static string parsing methods (`parse_proc_stat`, `parse_proc_meminfo`, `parse_proc_loadavg`, `parse_proc_uptime`) that do not interact with the filesystem. This guarantees that all edge cases (malformed input, zero delta, rollbacks, missing keys, unit overflows) are unit-tested deterministically without external host dependency.
-2. **Dependency Injection for File Access:**  
+2. **Dependency Injection for File Access:**
    `SystemTelemetry` accepts an injectable `TelemetryPaths` configuration, allowing test harnesses to inject synthetic proc fixtures or mock file paths.
-3. **Resilient Independent Metric Propagation:**  
+3. **Resilient Independent Metric Propagation:**
    Each telemetry metric is wrapped in an independent `kernox::core::Result<T>`. If `/proc/stat` is temporarily unreadable or invalid, memory, load average, and uptime will still be collected and displayed gracefully.
 
 ```
@@ -89,7 +89,7 @@ The `kernox status` command has been augmented to display live telemetry beneath
 
 ```text
 =========================================================
-                KERNOX SYSTEM STATUS REPORT              
+                KERNOX SYSTEM STATUS REPORT
 =========================================================
 Phase: Milestone 0 / Phase 4A.1 (Scaffolding & System Telemetry)
 
@@ -130,9 +130,9 @@ without crashing or hiding the remaining valid metrics.
 
 ## 4. WSL2 Environment Nuances & Limitations
 
-1. **Virtual Machine Boundaries:**  
+1. **Virtual Machine Boundaries:**
    Under WSL2, Linux runs inside a lightweight utility virtual machine managed by Hyper-V. `/proc/meminfo` reports the memory assigned to the WSL2 VM (defined in `.wslconfig` or defaulting to 50% of physical Windows RAM), not total host Windows physical memory.
-2. **CPU Virtualization:**  
+2. **CPU Virtualization:**
    `/proc/stat` reflects scheduling ticks inside the WSL2 guest kernel. In high-contention Windows host workloads, stolen or throttled guest execution can affect measured ticks.
-3. **Zero Reported File Size (`st_size == 0`):**  
+3. **Zero Reported File Size (`st_size == 0`):**
    Files in `/proc` are kernel-generated virtual streams. Standard filesystem APIs querying file size report 0 bytes. `SystemTelemetry::read_proc_file` reads through chunked buffers until EOF rather than pre-allocating using file size.

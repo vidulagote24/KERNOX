@@ -169,4 +169,3 @@ kernox process stat $$
 In contemporary Linux environments (kernel 5.3+), file-descriptor-based process handles (`pidfd_open(2)`, `pidfd_send_signal(2)`, and `waitid(P_PIDFD, ...)`) provide structural immunity against PID recycling races. Because a `pidfd` holds an immutable reference to a specific process instance, signaling through `pidfd_send_signal` cannot affect a recycled process even if the original target has already been reaped.
 
 While KERNOX targets modern Linux systems (Ubuntu 24.04 LTS), the current implementation relies strictly on standard POSIX `pid_t` and `wait4` semantics. Linux `pidfd` handles may be evaluated in a future architectural revision if concurrent external reaping or multi-threaded embedding support becomes a formalized project requirement. Today, compliance with the single-owner contract is the enforced invariant.
-

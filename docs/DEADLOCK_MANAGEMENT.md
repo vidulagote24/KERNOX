@@ -35,9 +35,9 @@ Edges $E$ represent states of dependency:
 
 > [!IMPORTANT]
 > **Fundamental Theorem of Resource Allocation Graphs**:
-> 1. **Single-Instance Resources ($C_j = 1$ for all $j$)**:  
+> 1. **Single-Instance Resources ($C_j = 1$ for all $j$)**:
 >    A directed cycle in the Resource Allocation Graph is **necessary and sufficient** for deadlock. A cycle directly proves that a circular wait exists and the system is deadlocked.
-> 2. **Multiple-Instance Resources ($\exists j: C_j > 1$)**:  
+> 2. **Multiple-Instance Resources ($\exists j: C_j > 1$)**:
 >    A directed cycle is **necessary but NOT sufficient** for deadlock. A cycle indicates that a deadlock *may* exist. However, if processes holding instances of the cycled resources are outside the cycle and can run to completion, they will release their instances and break the cycle.
 
 ---
@@ -192,4 +192,3 @@ A systematic correctness audit was conducted across all Deadlock module componen
 4. **Resource Allocation Graph (RAG) Analysis**:
    - **Cycle Resource Classification**: Refined `RAGCycleResult` with `cycle_is_single_instance`. Even in graphs containing multi-instance resources elsewhere, if all resource nodes *participating in the cycle path* have capacity 1, the cycle is classified as a **Definite Deadlock**.
    - **Capacity Bounds Enforcement**: Added immediate validation to `add_assignment_edge` preventing allocations exceeding capacity, and enforced $C_j > 0$ in `ResourceAllocationGraph::validate()`.
-

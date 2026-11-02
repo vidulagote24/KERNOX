@@ -209,4 +209,3 @@ namespace kernox::sys {
     using ProcessParser = kernox::system::ProcessParser;
     using ProcessManager = kernox::system::ProcessManager;
 }
-

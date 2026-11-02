@@ -73,7 +73,18 @@ echo ">> Running ${BIN_PATH} memory replace --algorithm lru --workload page-refe
 echo ">> Running ${BIN_PATH} memory ws --workload page-reference-demo --window 4"
 "${BIN_PATH}" memory ws --workload page-reference-demo --window 4
 
+echo ">> Running ${BIN_PATH} process stat 1"
+"${BIN_PATH}" process stat 1
+
+echo ">> Running ${BIN_PATH} sync demo"
+"${BIN_PATH}" sync demo
+
+echo ">> Running ${BIN_PATH} ipc unix-demo"
+"${BIN_PATH}" ipc unix-demo
+
+echo ">> Running ${BIN_PATH} ipc mq-demo"
+"${BIN_PATH}" ipc mq-demo
+
 echo "========================================================="
 echo "  KERNOX: All Verification Checks Passed Successfully!"
 echo "========================================================="
-

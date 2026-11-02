@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <fstream>
 #include <string>
+#include <unistd.h>
 
 using namespace kernox::system;
 using namespace kernox::core;
@@ -527,6 +528,124 @@ int test_telemetry_live_host_collection() {
     return 0;
 }
 
+int test_proc_status_parsing_synthetic() {
+    const std::string content =
+        "Name:\tbash\n"
+        "Umask:\t0022\n"
+        "State:\tS (sleeping)\n"
+        "Tgid:\t4321\n"
+        "Ngid:\t0\n"
+        "Pid:\t4321\n"
+        "PPid:\t1234\n"
+        "TracerPid:\t0\n"
+        "Uid:\t1000\t1001\t1002\t1003\n"
+        "Gid:\t2000\t2001\t2002\t2003\n"
+        "VmPeak:\t    5848 kB\n"
+        "VmSize:\t    5848 kB\n"
+        "VmRSS:\t    3364 kB\n"
+        "VmSwap:\t      40 kB\n"
+        "Threads:\t4\n"
+        "voluntary_ctxt_switches:\t150\n"
+        "nonvoluntary_ctxt_switches:\t42\n";
+
+    auto res = TelemetryParser::parse_proc_status(content);
+    KERNOX_ASSERT_TRUE(res.is_ok());
+
+    const auto& s = res.value();
+    KERNOX_ASSERT_EQ(s.name, "bash");
+    KERNOX_ASSERT_EQ(s.state, 'S');
+    KERNOX_ASSERT_EQ(s.state_description, "sleeping");
+    KERNOX_ASSERT_EQ(s.pid, 4321);
+    KERNOX_ASSERT_EQ(s.ppid, 1234);
+    KERNOX_ASSERT_EQ(s.threads, 4u);
+
+    KERNOX_ASSERT_EQ(s.uid_real, 1000u);
+    KERNOX_ASSERT_EQ(s.uid_effective, 1001u);
+    KERNOX_ASSERT_EQ(s.uid_saved, 1002u);
+    KERNOX_ASSERT_EQ(s.uid_fs, 1003u);
+
+    KERNOX_ASSERT_EQ(s.gid_real, 2000u);
+    KERNOX_ASSERT_EQ(s.gid_effective, 2001u);
+    KERNOX_ASSERT_EQ(s.gid_saved, 2002u);
+    KERNOX_ASSERT_EQ(s.gid_fs, 2003u);
+
+    KERNOX_ASSERT_EQ(s.vm_size_bytes, 5848ULL * 1024ULL);
+    KERNOX_ASSERT_EQ(s.vm_rss_bytes, 3364ULL * 1024ULL);
+    KERNOX_ASSERT_EQ(s.vm_peak_bytes, 5848ULL * 1024ULL);
+    KERNOX_ASSERT_EQ(s.vm_swap_bytes, 40ULL * 1024ULL);
+
+    KERNOX_ASSERT_EQ(s.voluntary_context_switches, 150ULL);
+    KERNOX_ASSERT_EQ(s.nonvoluntary_context_switches, 42ULL);
+
+    // Empty content should fail
+    auto empty_res = TelemetryParser::parse_proc_status("");
+    KERNOX_ASSERT_TRUE(empty_res.is_err());
+    KERNOX_ASSERT_EQ(empty_res.error().code, ErrorCode::InvalidArgument);
+
+    return 0;
+}
+
+int test_proc_io_parsing_synthetic() {
+    const std::string content =
+        "rchar: 123456\n"
+        "wchar: 654321\n"
+        "syscr: 987\n"
+        "syscw: 789\n"
+        "read_bytes: 40960\n"
+        "write_bytes: 81920\n"
+        "cancelled_write_bytes: 1024\n";
+
+    auto res = TelemetryParser::parse_proc_io(content, 4321);
+    KERNOX_ASSERT_TRUE(res.is_ok());
+
+    const auto& io = res.value();
+    KERNOX_ASSERT_EQ(io.pid, 4321);
+    KERNOX_ASSERT_EQ(io.rchar, 123456ULL);
+    KERNOX_ASSERT_EQ(io.wchar, 654321ULL);
+    KERNOX_ASSERT_EQ(io.syscr, 987ULL);
+    KERNOX_ASSERT_EQ(io.syscw, 789ULL);
+    KERNOX_ASSERT_EQ(io.read_bytes, 40960ULL);
+    KERNOX_ASSERT_EQ(io.write_bytes, 81920ULL);
+    KERNOX_ASSERT_EQ(io.cancelled_write_bytes, 1024ULL);
+
+    // Empty content should fail
+    auto empty_res = TelemetryParser::parse_proc_io("");
+    KERNOX_ASSERT_TRUE(empty_res.is_err());
+    KERNOX_ASSERT_EQ(empty_res.error().code, ErrorCode::InvalidArgument);
+
+    return 0;
+}
+
+int test_proc_status_and_io_live() {
+    pid_t self_pid = ::getpid();
+
+    auto status_res = SystemTelemetry::get_process_status(self_pid);
+    KERNOX_ASSERT_TRUE(status_res.is_ok());
+    const auto& st = status_res.value();
+    KERNOX_ASSERT_EQ(st.pid, self_pid);
+    KERNOX_ASSERT_TRUE(st.threads >= 1u);
+    KERNOX_ASSERT_TRUE(st.vm_rss_bytes > 0);
+
+    // Non-existent PID should return error (IoError or NotFound)
+    auto missing_res = SystemTelemetry::get_process_status(99999999);
+    KERNOX_ASSERT_TRUE(missing_res.is_err());
+    KERNOX_ASSERT_TRUE(missing_res.error().code == ErrorCode::NotFound || missing_res.error().code == ErrorCode::IoError);
+
+    // Live IO test on self (may return permission denied or not found on some WSL/kernels, but if ok, must have valid PID)
+    auto io_res = SystemTelemetry::get_process_io(self_pid);
+    if (io_res.is_ok()) {
+        KERNOX_ASSERT_EQ(io_res.value().pid, self_pid);
+    } else {
+        // Safe graceful degradation if proc/io is disabled or restricted
+        KERNOX_ASSERT_TRUE(
+            io_res.error().code == ErrorCode::PermissionDenied ||
+            io_res.error().code == ErrorCode::NotFound ||
+            io_res.error().code == ErrorCode::IoError);
+    }
+
+    return 0;
+}
+
 } // namespace
 
 int main() {
@@ -550,6 +669,10 @@ int main() {
     KERNOX_ASSERT_EQ(test_telemetry_missing_files_error_handling(), 0);
     KERNOX_ASSERT_EQ(test_bounded_proc_file_reading(), 0);
     KERNOX_ASSERT_EQ(test_telemetry_live_host_collection(), 0);
+
+    KERNOX_ASSERT_EQ(test_proc_status_parsing_synthetic(), 0);
+    KERNOX_ASSERT_EQ(test_proc_io_parsing_synthetic(), 0);
+    KERNOX_ASSERT_EQ(test_proc_status_and_io_live(), 0);
 
     std::cout << "All telemetry module unit and regression tests passed successfully.\n";
     return 0;

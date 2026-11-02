@@ -15,7 +15,7 @@ Each simulated process is defined by:
 
 ### 1.2 Priority Convention
 > [!IMPORTANT]
-> **Lower numerical value denotes higher scheduling priority.**  
+> **Lower numerical value denotes higher scheduling priority.**
 > Priority `0` represents the highest possible priority. This follows UNIX/POSIX `nice` conventions and standard operating system literature.
 
 ### 1.3 Deterministic Tie-Breaking
@@ -52,7 +52,7 @@ Input workloads are validated prior to execution:
 ### 2.4 Round Robin (RR)
 * **Type:** Preemptive with time slicing.
 * **Policy:** Ready processes are maintained in a FIFO queue and allocated a maximum time slice ($\text{quantum} > 0$).
-* **Quantum Expiration Boundary Ordering:**  
+* **Quantum Expiration Boundary Ordering:**
   When a running process's time slice expires at time $t$, newly arrived processes arriving at time $t$ are appended to the ready queue **before** the preempted process is requeued. This guarantees fairness and prevents starvation of arriving jobs.
 
 ### 2.5 Priority Scheduling

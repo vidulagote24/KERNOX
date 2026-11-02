@@ -100,6 +100,22 @@ int main() {
     KERNOX_ASSERT_NE(CommandDispatcher::run({"memory", "replace"}), 0); // missing algo
     KERNOX_ASSERT_NE(CommandDispatcher::run({"memory", "replace", "--algorithm", "invalid_algo"}), 0);
 
+    // 15. Synchronization CLI commands
+    KERNOX_ASSERT_EQ(CommandDispatcher::run({"sync", "--help"}), 0);
+    KERNOX_ASSERT_EQ(CommandDispatcher::run({"sync", "demo", "--messages", "2", "--capacity", "2"}), 0);
+    KERNOX_ASSERT_NE(CommandDispatcher::run({"sync", "invalid_subcmd"}), 0);
+
+    // 16. IPC CLI commands (including UNIX domain sockets and POSIX message queues)
+    KERNOX_ASSERT_EQ(CommandDispatcher::run({"ipc", "--help"}), 0);
+    KERNOX_ASSERT_EQ(CommandDispatcher::run({"ipc", "unix-demo", "--help"}), 0);
+    KERNOX_ASSERT_EQ(CommandDispatcher::run({"ipc", "unix-demo"}), 0);
+    KERNOX_ASSERT_EQ(CommandDispatcher::run({"ipc", "mq-demo", "--help"}), 0);
+    KERNOX_ASSERT_EQ(CommandDispatcher::run({"ipc", "mq-demo"}), 0);
+    KERNOX_ASSERT_NE(CommandDispatcher::run({"ipc", "invalid_subcmd"}), 0);
+
+    // 17. Process telemetry CLI commands
+    KERNOX_ASSERT_EQ(CommandDispatcher::run({"process", "stat", "1"}), 0);
+
     std::cout << "[PASS] test_cli completed successfully.\n";
     return 0;
 }

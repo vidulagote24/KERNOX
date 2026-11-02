@@ -1,11 +1,11 @@
 # KERNOX — Technical Architecture and Engineering Design
 
-**Project Title:** KERNOX — A Linux-Based Operating System Resource Management and Benchmarking Platform  
-**Target Standard:** Modern C++ (C++20 / C++17)  
-**Target Environment:** Linux / WSL 2 (Ubuntu 24.04 LTS or compatible)  
-**Executable Name:** `kernox`  
-**Document Version:** 1.0.0 (Phase 1 Planning)  
-**Date:** October 2026  
+**Project Title:** KERNOX — A Linux-Based Operating System Resource Management and Benchmarking Platform
+**Target Standard:** Modern C++ (C++20 / C++17)
+**Target Environment:** Linux / WSL 2 (Ubuntu 24.04 LTS or compatible)
+**Executable Name:** `kernox`
+**Document Version:** 1.0.0 (Phase 1 Planning)
+**Date:** October 2026
 
 ---
 
@@ -231,7 +231,7 @@ public:
     UniqueFd& operator=(const UniqueFd&) = delete;
     UniqueFd(UniqueFd&& other) noexcept : fd_(other.release()) {}
     UniqueFd& operator=(UniqueFd&& other) noexcept;
-    
+
     [[nodiscard]] int get() const noexcept { return fd_; }
     [[nodiscard]] bool is_valid() const noexcept { return fd_ >= 0; }
     void reset(int new_fd = -1) noexcept;
@@ -299,7 +299,7 @@ public:
 namespace kernox::sys {
 class ThreadManager {
 public:
-    static Result<void> run_concurrent_workers(size_t num_threads, 
+    static Result<void> run_concurrent_workers(size_t num_threads,
                                                size_t work_iterations,
                                                bool bind_to_cores);
     static size_t get_hardware_concurrency() noexcept;

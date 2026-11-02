@@ -224,4 +224,3 @@ During the Phase 3D.1 independent correctness audit, the memory management subsy
    - $\Delta = 1$: $|W(t, 1)| = 1$ for all $t$, peak size = 1, average size = 1.0.
    - $\Delta = N$: $|W(N, N)| = \text{DistinctPages}$, peak size = 4, average size = $2.6667$.
    - $\Delta > N$: Window cleanly clamps to available historical references without index overflow or division by zero.
-
