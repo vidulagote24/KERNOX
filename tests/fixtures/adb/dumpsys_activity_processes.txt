@@ -1,0 +1,13 @@
+ACTIVITY MANAGER RUNNING PROCESSES (dumpsys activity processes)
+  * ProcessRecord{42a1b90 1420:com.android.systemui/u0a45}
+      user #0 uid=10045 gids={3003, 1028}
+      oom_adj=0 oom_score_adj=0
+      curProcState=2 (top-activity)
+  * ProcessRecord{81c2d30 3100:com.google.android.apps.nexuslauncher/u0a12}
+      user #0 uid=10012
+      oom_adj=100 oom_score_adj=100
+      curProcState=3 (foreground-service)
+  * ProcessRecord{99ff110 5200:com.example.cachedgallery/u0a88}
+      user #0 uid=10088
+      oom_adj=905 oom_score_adj=905
+      curProcState=16 (cached-empty)

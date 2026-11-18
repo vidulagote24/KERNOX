@@ -1,0 +1,24 @@
+Total PSS by OOM classification:
+  Native
+     41,200K: surfaceflinger (pid 612)
+     28,500K: android.hardware.graphics.composer (pid 650)
+  System
+     95,100K: system (pid 950)
+  Persistent
+    312,450K: com.android.systemui (pid 1420)
+  Foreground
+    150,000K: com.google.android.apps.nexuslauncher (pid 3100)
+  Visible
+     80,000K: com.google.android.deskclock (pid 3400)
+  Perceptible
+    110,000K: com.google.android.music (pid 4100)
+  A Services
+     60,000K: com.google.android.gms.persistent (pid 4500)
+  Cached
+     45,000K: com.example.cachedgallery (pid 5200)
+     35,000K: com.android.calculator2 (pid 5310)
+
+Total RAM: 7,856,128K (status normal)
+ Free RAM: 3,214,560K
+ Used RAM: 4,120,400K
+ Lost RAM:   521,168K

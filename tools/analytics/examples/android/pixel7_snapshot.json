@@ -1,0 +1,139 @@
+{
+  "source": "android_adb_observation",
+  "collection_timestamp_epoch_ms": 1731672000000,
+  "collection_duration_us": 45210,
+  "device_info": {
+    "serial": "emulator-5554",
+    "state": "device",
+    "target_type": "Android Virtual Device (AVD)",
+    "is_emulator": true,
+    "manufacturer": "Google",
+    "model": "Pixel 7 (Emulator)",
+    "product": "sdk_gphone64_x86_64",
+    "device": "emulator64_x86_64",
+    "android_release": "14",
+    "sdk_version": 34
+  },
+  "memory_snapshot": {
+    "source": "dumpsys_meminfo",
+    "timestamp_epoch_ms": 1731672000000,
+    "confidence": "High",
+    "memory_metrics": {
+      "total_ram_bytes": 8044675072,
+      "free_ram_bytes": 1284505600,
+      "available_ram_bytes": 3824107520,
+      "used_ram_bytes": 4220567552,
+      "cached_bytes": 2539601920,
+      "buffers_bytes": 104857600,
+      "swap_total_bytes": 4294967296,
+      "swap_free_bytes": 3221225472,
+      "zram_physical_used_bytes": 536870912,
+      "lost_ram_bytes": 134217728
+    },
+    "warnings": []
+  },
+  "process_count": 8,
+  "processes": [
+    {
+      "source": "android_adb_observation",
+      "pid": 620,
+      "process_name": "surfaceflinger",
+      "package_name": "surfaceflinger",
+      "pss_bytes": 223346688,
+      "rss_bytes": 285212672,
+      "raw_importance": "system",
+      "normalized_importance": "Foreground",
+      "oom_score_adj": -1000,
+      "confidence": "High"
+    },
+    {
+      "source": "android_adb_observation",
+      "pid": 1102,
+      "process_name": "system_server",
+      "package_name": "system_server",
+      "pss_bytes": 482344960,
+      "rss_bytes": 589299712,
+      "raw_importance": "system",
+      "normalized_importance": "Foreground",
+      "oom_score_adj": -900,
+      "confidence": "High"
+    },
+    {
+      "source": "android_adb_observation",
+      "pid": 2410,
+      "process_name": "com.android.systemui",
+      "package_name": "com.android.systemui",
+      "pss_bytes": 314572800,
+      "rss_bytes": 398458880,
+      "raw_importance": "pers",
+      "normalized_importance": "Foreground",
+      "oom_score_adj": -800,
+      "confidence": "High"
+    },
+    {
+      "source": "android_adb_observation",
+      "pid": 3892,
+      "process_name": "com.google.android.apps.nexuslauncher",
+      "package_name": "com.google.android.apps.nexuslauncher",
+      "pss_bytes": 178257920,
+      "rss_bytes": 234881024,
+      "raw_importance": "home",
+      "normalized_importance": "Visible",
+      "oom_score_adj": 600,
+      "confidence": "High"
+    },
+    {
+      "source": "android_adb_observation",
+      "pid": 4512,
+      "process_name": "com.google.android.gms.persistent",
+      "package_name": "com.google.android.gms",
+      "pss_bytes": 146800640,
+      "rss_bytes": 188743680,
+      "raw_importance": "svc",
+      "normalized_importance": "Service",
+      "oom_score_adj": 500,
+      "confidence": "High"
+    },
+    {
+      "source": "android_adb_observation",
+      "pid": 5821,
+      "process_name": "com.google.android.dialer",
+      "package_name": "com.google.android.dialer",
+      "pss_bytes": 115343360,
+      "rss_bytes": 157286400,
+      "raw_importance": "fg-service",
+      "normalized_importance": "Foreground",
+      "oom_score_adj": 200,
+      "confidence": "High"
+    },
+    {
+      "source": "android_adb_observation",
+      "pid": 7109,
+      "process_name": "com.android.chrome",
+      "package_name": "com.android.chrome",
+      "pss_bytes": 268435456,
+      "rss_bytes": 335544320,
+      "raw_importance": "bg",
+      "normalized_importance": "Background",
+      "oom_score_adj": 700,
+      "confidence": "High"
+    },
+    {
+      "source": "android_adb_observation",
+      "pid": 8901,
+      "process_name": "com.spotify.music",
+      "package_name": "com.spotify.music",
+      "pss_bytes": 188743680,
+      "rss_bytes": 241172480,
+      "raw_importance": "cch",
+      "normalized_importance": "Cached",
+      "oom_score_adj": 905,
+      "confidence": "High"
+    }
+  ],
+  "diagnostics": {
+    "failed_commands": [],
+    "permission_restrictions": [],
+    "warnings": []
+  }
+}

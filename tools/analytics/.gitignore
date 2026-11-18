@@ -1,0 +1,19 @@
+# Python artifacts
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local experiment outputs (preserve directory with .gitkeep)
+output/*.png
+output/*.md
+!output/.gitkeep
+
+# Ignore generated outputs in nested directories too
+output/**/*.png
+output/**/*.md

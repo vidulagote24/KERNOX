@@ -144,6 +144,111 @@ target_link_libraries(kernox_system PUBLIC
 )
 
 # -----------------------------------------------------------------------------
+# Intel Modules: kernox_intel
+# -----------------------------------------------------------------------------
+add_library(kernox_intel STATIC
+    src/modules/intel/process_model.cpp
+)
+
+target_include_directories(kernox_intel PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+
+target_link_libraries(kernox_intel PUBLIC
+    kernox_core
+    kernox_sim
+    kernox_compiler_flags
+)
+
+# -----------------------------------------------------------------------------
+# Reclaim Modules: kernox_reclaim
+# -----------------------------------------------------------------------------
+add_library(kernox_reclaim STATIC
+    src/modules/reclaim/pressure_detector.cpp
+    src/modules/reclaim/reclamation_policy.cpp
+    src/modules/reclaim/reclamation_engine.cpp
+)
+
+target_include_directories(kernox_reclaim PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+
+target_link_libraries(kernox_reclaim PUBLIC
+    kernox_intel
+    kernox_core
+    kernox_compiler_flags
+)
+
+# -----------------------------------------------------------------------------
+# Experiment Modules: kernox_experiment
+# -----------------------------------------------------------------------------
+add_library(kernox_experiment STATIC
+    src/modules/experiment/workload.cpp
+    src/modules/experiment/experiment_runner.cpp
+    src/modules/experiment/exporter.cpp
+)
+
+target_include_directories(kernox_experiment PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+
+target_link_libraries(kernox_experiment PUBLIC
+    kernox_reclaim
+    kernox_intel
+    kernox_core
+    kernox_compiler_flags
+)
+
+# -----------------------------------------------------------------------------
+# Android ADB Modules: kernox_adb
+# -----------------------------------------------------------------------------
+add_library(kernox_adb STATIC
+    src/modules/adb/types.cpp
+    src/modules/adb/bridge.cpp
+    src/modules/adb/parser.cpp
+    src/modules/adb/service.cpp
+)
+
+target_include_directories(kernox_adb PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+
+target_link_libraries(kernox_adb PUBLIC
+    kernox_core
+    kernox_compiler_flags
+)
+
+# -----------------------------------------------------------------------------
+# Simulator Modules: kernox_simulator
+# -----------------------------------------------------------------------------
+add_library(kernox_simulator STATIC
+    src/modules/simulator/custom_process.cpp
+    src/modules/simulator/workload_builder.cpp
+    src/modules/simulator/terminal_reader.cpp
+    src/modules/simulator/interactive_menu.cpp
+    src/modules/simulator/ascii_visualizer.cpp
+    src/modules/simulator/analytics_bridge.cpp
+)
+
+target_include_directories(kernox_simulator PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+
+target_link_libraries(kernox_simulator PUBLIC
+    kernox_experiment
+    kernox_reclaim
+    kernox_intel
+    kernox_core
+    kernox_adb
+    kernox_compiler_flags
+)
+
+# -----------------------------------------------------------------------------
 # CLI Library: kernox_cli
 # -----------------------------------------------------------------------------
 add_library(kernox_cli STATIC
@@ -156,6 +261,11 @@ target_include_directories(kernox_cli PUBLIC
 )
 
 target_link_libraries(kernox_cli PUBLIC
+    kernox_simulator
+    kernox_adb
+    kernox_experiment
+    kernox_reclaim
+    kernox_intel
     kernox_system
     kernox_sim
     kernox_core
@@ -171,6 +281,11 @@ add_executable(kernox
 
 target_link_libraries(kernox PRIVATE
     kernox_cli
+    kernox_simulator
+    kernox_adb
+    kernox_experiment
+    kernox_reclaim
+    kernox_intel
     kernox_system
     kernox_sim
     kernox_core

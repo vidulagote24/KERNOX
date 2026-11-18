@@ -6,8 +6,16 @@ macro(kernox_add_test test_name source_file)
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${PROJECT_SOURCE_DIR}/include
     )
+    target_compile_definitions(${test_name} PRIVATE
+        KERNOX_TEST_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/adb"
+    )
     target_link_libraries(${test_name} PRIVATE
         kernox_cli
+        kernox_simulator
+        kernox_adb
+        kernox_experiment
+        kernox_reclaim
+        kernox_intel
         kernox_system
         kernox_sim
         kernox_core
@@ -32,6 +40,11 @@ kernox_add_test(test_shm test_shm.cpp)
 kernox_add_test(test_sync test_sync.cpp)
 kernox_add_test(test_unix_socket test_unix_socket.cpp)
 kernox_add_test(test_message_queue test_message_queue.cpp)
+kernox_add_test(test_process_intel test_process_intel.cpp)
+kernox_add_test(test_reclamation test_reclamation.cpp)
+kernox_add_test(test_experiment test_experiment.cpp)
+kernox_add_test(test_adb_parser test_adb_parser.cpp)
+kernox_add_test(test_interactive_simulator test_interactive_simulator.cpp)
 
 add_executable(env_test_helper env_test_helper.cpp)
 target_link_libraries(env_test_helper PRIVATE kernox_compiler_flags)

@@ -1,0 +1,453 @@
+{
+  "scenario_name": "HighMemoryPressure",
+  "seed": 42,
+  "workload_fingerprint": "WKL-4EADB75EFE044AD2",
+  "total_capacity_bytes": 1073741824,
+  "policy_count": 4,
+  "policy_results": [
+    {
+      "policy_name": "FIFO",
+      "scenario_name": "HighMemoryPressure",
+      "seed": 42,
+      "workload_fingerprint": "WKL-4EADB75EFE044AD2",
+      "metrics": {
+        "memory": {
+          "total_capacity_bytes": 1073741824,
+          "initial_used_bytes": 0,
+          "peak_used_bytes": 1031798784,
+          "final_used_bytes": 982515712,
+          "average_utilization_ratio": 0.8418,
+          "total_reclaimed_bytes": 1214251008,
+          "pressure_events_moderate": 15,
+          "pressure_events_critical": 71
+        },
+        "processes": {
+          "total_processes": 10,
+          "processes_completed": 4,
+          "processes_terminated_pressure": 6,
+          "processes_survived": 4,
+          "survival_rate": 0.4000,
+          "foreground_survival_rate": 0.0000,
+          "visible_survival_rate": 1.0000,
+          "service_survival_rate": 1.0000,
+          "background_survival_rate": 0.6000,
+          "cached_survival_rate": 0.3333
+        },
+        "reclamation": {
+          "reclamation_invocations": 4,
+          "reclamation_successes": 4,
+          "processes_reclaimed": 6,
+          "average_reclaimed_per_victim_bytes": 202375168.0,
+          "failed_allocations": 0,
+          "no_eligible_victim_events": 0,
+          "target_achievement_rate": 1.0000
+        },
+        "timing": {
+          "simulated_duration_ticks": 100,
+          "wall_clock_elapsed_microseconds": 2520
+        }
+      },
+      "reclamation_log": [
+        {
+          "victim_pid": 1000,
+          "victim_name": "com.weather.forecast_1",
+          "importance_tier": "Cached",
+          "importance_score": 500,
+          "cpu_priority": 83,
+          "memory_reclaimed_bytes": 189792256,
+          "policy_name": "FIFO",
+          "reason": "FIFO: oldest resident process (created at tick 0, PID 1000)",
+          "timestamp_ticks": 15
+        },
+        {
+          "victim_pid": 1001,
+          "victim_name": "com.dropbox.sync_2",
+          "importance_tier": "Background",
+          "importance_score": 400,
+          "cpu_priority": 69,
+          "memory_reclaimed_bytes": 173015040,
+          "policy_name": "FIFO",
+          "reason": "FIFO: oldest resident process (created at tick 0, PID 1001)",
+          "timestamp_ticks": 15
+        },
+        {
+          "victim_pid": 1002,
+          "victim_name": "com.amazon.mShop_3",
+          "importance_tier": "Background",
+          "importance_score": 400,
+          "cpu_priority": 61,
+          "memory_reclaimed_bytes": 238026752,
+          "policy_name": "FIFO",
+          "reason": "FIFO: oldest resident process (created at tick 5, PID 1002)",
+          "timestamp_ticks": 20
+        },
+        {
+          "victim_pid": 1003,
+          "victim_name": "com.android.dialer_4",
+          "importance_tier": "Foreground",
+          "importance_score": 100,
+          "cpu_priority": 11,
+          "memory_reclaimed_bytes": 203423744,
+          "policy_name": "FIFO",
+          "reason": "FIFO: oldest resident process (created at tick 5, PID 1003)",
+          "timestamp_ticks": 20
+        },
+        {
+          "victim_pid": 1004,
+          "victim_name": "com.twitter.android_5",
+          "importance_tier": "Foreground",
+          "importance_score": 100,
+          "cpu_priority": 0,
+          "memory_reclaimed_bytes": 160432128,
+          "policy_name": "FIFO",
+          "reason": "FIFO: oldest resident process (created at tick 10, PID 1004)",
+          "timestamp_ticks": 25
+        },
+        {
+          "victim_pid": 1005,
+          "victim_name": "com.trivia.quiz_6",
+          "importance_tier": "Cached",
+          "importance_score": 500,
+          "cpu_priority": 98,
+          "memory_reclaimed_bytes": 249561088,
+          "policy_name": "FIFO",
+          "reason": "FIFO: oldest resident process (created at tick 10, PID 1005)",
+          "timestamp_ticks": 25
+        }
+      ]
+    },
+    {
+      "policy_name": "LRU",
+      "scenario_name": "HighMemoryPressure",
+      "seed": 42,
+      "workload_fingerprint": "WKL-4EADB75EFE044AD2",
+      "metrics": {
+        "memory": {
+          "total_capacity_bytes": 1073741824,
+          "initial_used_bytes": 0,
+          "peak_used_bytes": 1031798784,
+          "final_used_bytes": 982515712,
+          "average_utilization_ratio": 0.8418,
+          "total_reclaimed_bytes": 1214251008,
+          "pressure_events_moderate": 15,
+          "pressure_events_critical": 71
+        },
+        "processes": {
+          "total_processes": 10,
+          "processes_completed": 4,
+          "processes_terminated_pressure": 6,
+          "processes_survived": 4,
+          "survival_rate": 0.4000,
+          "foreground_survival_rate": 0.0000,
+          "visible_survival_rate": 1.0000,
+          "service_survival_rate": 1.0000,
+          "background_survival_rate": 0.6000,
+          "cached_survival_rate": 0.3333
+        },
+        "reclamation": {
+          "reclamation_invocations": 4,
+          "reclamation_successes": 4,
+          "processes_reclaimed": 6,
+          "average_reclaimed_per_victim_bytes": 202375168.0,
+          "failed_allocations": 0,
+          "no_eligible_victim_events": 0,
+          "target_achievement_rate": 1.0000
+        },
+        "timing": {
+          "simulated_duration_ticks": 100,
+          "wall_clock_elapsed_microseconds": 640
+        }
+      },
+      "reclamation_log": [
+        {
+          "victim_pid": 1000,
+          "victim_name": "com.weather.forecast_1",
+          "importance_tier": "Cached",
+          "importance_score": 500,
+          "cpu_priority": 83,
+          "memory_reclaimed_bytes": 189792256,
+          "policy_name": "LRU",
+          "reason": "LRU: least recently active process (last active at tick 14, PID 1000)",
+          "timestamp_ticks": 15
+        },
+        {
+          "victim_pid": 1001,
+          "victim_name": "com.dropbox.sync_2",
+          "importance_tier": "Background",
+          "importance_score": 400,
+          "cpu_priority": 69,
+          "memory_reclaimed_bytes": 173015040,
+          "policy_name": "LRU",
+          "reason": "LRU: least recently active process (last active at tick 14, PID 1001)",
+          "timestamp_ticks": 15
+        },
+        {
+          "victim_pid": 1002,
+          "victim_name": "com.amazon.mShop_3",
+          "importance_tier": "Background",
+          "importance_score": 400,
+          "cpu_priority": 61,
+          "memory_reclaimed_bytes": 238026752,
+          "policy_name": "LRU",
+          "reason": "LRU: least recently active process (last active at tick 19, PID 1002)",
+          "timestamp_ticks": 20
+        },
+        {
+          "victim_pid": 1003,
+          "victim_name": "com.android.dialer_4",
+          "importance_tier": "Foreground",
+          "importance_score": 100,
+          "cpu_priority": 11,
+          "memory_reclaimed_bytes": 203423744,
+          "policy_name": "LRU",
+          "reason": "LRU: least recently active process (last active at tick 19, PID 1003)",
+          "timestamp_ticks": 20
+        },
+        {
+          "victim_pid": 1004,
+          "victim_name": "com.twitter.android_5",
+          "importance_tier": "Foreground",
+          "importance_score": 100,
+          "cpu_priority": 0,
+          "memory_reclaimed_bytes": 160432128,
+          "policy_name": "LRU",
+          "reason": "LRU: least recently active process (last active at tick 24, PID 1004)",
+          "timestamp_ticks": 25
+        },
+        {
+          "victim_pid": 1005,
+          "victim_name": "com.trivia.quiz_6",
+          "importance_tier": "Cached",
+          "importance_score": 500,
+          "cpu_priority": 98,
+          "memory_reclaimed_bytes": 249561088,
+          "policy_name": "LRU",
+          "reason": "LRU: least recently active process (last active at tick 24, PID 1005)",
+          "timestamp_ticks": 25
+        }
+      ]
+    },
+    {
+      "policy_name": "Priority",
+      "scenario_name": "HighMemoryPressure",
+      "seed": 42,
+      "workload_fingerprint": "WKL-4EADB75EFE044AD2",
+      "metrics": {
+        "memory": {
+          "total_capacity_bytes": 1073741824,
+          "initial_used_bytes": 0,
+          "peak_used_bytes": 974127104,
+          "final_used_bytes": 974127104,
+          "average_utilization_ratio": 0.8181,
+          "total_reclaimed_bytes": 1032847360,
+          "pressure_events_moderate": 20,
+          "pressure_events_critical": 61
+        },
+        "processes": {
+          "total_processes": 10,
+          "processes_completed": 4,
+          "processes_terminated_pressure": 6,
+          "processes_survived": 4,
+          "survival_rate": 0.4000,
+          "foreground_survival_rate": 1.0000,
+          "visible_survival_rate": 1.0000,
+          "service_survival_rate": 1.0000,
+          "background_survival_rate": 0.4000,
+          "cached_survival_rate": 0.0000
+        },
+        "reclamation": {
+          "reclamation_invocations": 3,
+          "reclamation_successes": 3,
+          "processes_reclaimed": 6,
+          "average_reclaimed_per_victim_bytes": 172141226.7,
+          "failed_allocations": 0,
+          "no_eligible_victim_events": 0,
+          "target_achievement_rate": 1.0000
+        },
+        "timing": {
+          "simulated_duration_ticks": 100,
+          "wall_clock_elapsed_microseconds": 646
+        }
+      },
+      "reclamation_log": [
+        {
+          "victim_pid": 1005,
+          "victim_name": "com.trivia.quiz_6",
+          "importance_tier": "Cached",
+          "importance_score": 500,
+          "cpu_priority": 98,
+          "memory_reclaimed_bytes": 180355072,
+          "policy_name": "Priority",
+          "reason": "Priority: lowest CPU scheduling priority (98, PID 1005)",
+          "timestamp_ticks": 15
+        },
+        {
+          "victim_pid": 1006,
+          "victim_name": "com.weather.forecast_7",
+          "importance_tier": "Cached",
+          "importance_score": 500,
+          "cpu_priority": 97,
+          "memory_reclaimed_bytes": 117440512,
+          "policy_name": "Priority",
+          "reason": "Priority: lowest CPU scheduling priority (97, PID 1006)",
+          "timestamp_ticks": 15
+        },
+        {
+          "victim_pid": 1000,
+          "victim_name": "com.weather.forecast_1",
+          "importance_tier": "Cached",
+          "importance_score": 500,
+          "cpu_priority": 83,
+          "memory_reclaimed_bytes": 189792256,
+          "policy_name": "Priority",
+          "reason": "Priority: lowest CPU scheduling priority (83, PID 1000)",
+          "timestamp_ticks": 15
+        },
+        {
+          "victim_pid": 1001,
+          "victim_name": "com.dropbox.sync_2",
+          "importance_tier": "Background",
+          "importance_score": 400,
+          "cpu_priority": 69,
+          "memory_reclaimed_bytes": 173015040,
+          "policy_name": "Priority",
+          "reason": "Priority: lowest CPU scheduling priority (69, PID 1001)",
+          "timestamp_ticks": 15
+        },
+        {
+          "victim_pid": 1008,
+          "victim_name": "com.amazon.mShop_9",
+          "importance_tier": "Background",
+          "importance_score": 400,
+          "cpu_priority": 69,
+          "memory_reclaimed_bytes": 134217728,
+          "policy_name": "Priority",
+          "reason": "Priority: lowest CPU scheduling priority (69, PID 1008)",
+          "timestamp_ticks": 20
+        },
+        {
+          "victim_pid": 1002,
+          "victim_name": "com.amazon.mShop_3",
+          "importance_tier": "Background",
+          "importance_score": 400,
+          "cpu_priority": 61,
+          "memory_reclaimed_bytes": 238026752,
+          "policy_name": "Priority",
+          "reason": "Priority: lowest CPU scheduling priority (61, PID 1002)",
+          "timestamp_ticks": 20
+        }
+      ]
+    },
+    {
+      "policy_name": "ImportanceAware",
+      "scenario_name": "HighMemoryPressure",
+      "seed": 42,
+      "workload_fingerprint": "WKL-4EADB75EFE044AD2",
+      "metrics": {
+        "memory": {
+          "total_capacity_bytes": 1073741824,
+          "initial_used_bytes": 0,
+          "peak_used_bytes": 1013972992,
+          "final_used_bytes": 947912704,
+          "average_utilization_ratio": 0.8097,
+          "total_reclaimed_bytes": 1117782016,
+          "pressure_events_moderate": 76,
+          "pressure_events_critical": 5
+        },
+        "processes": {
+          "total_processes": 10,
+          "processes_completed": 4,
+          "processes_terminated_pressure": 6,
+          "processes_survived": 4,
+          "survival_rate": 0.4000,
+          "foreground_survival_rate": 1.0000,
+          "visible_survival_rate": 1.0000,
+          "service_survival_rate": 1.0000,
+          "background_survival_rate": 0.4000,
+          "cached_survival_rate": 0.0000
+        },
+        "reclamation": {
+          "reclamation_invocations": 3,
+          "reclamation_successes": 3,
+          "processes_reclaimed": 6,
+          "average_reclaimed_per_victim_bytes": 186297002.7,
+          "failed_allocations": 0,
+          "no_eligible_victim_events": 0,
+          "target_achievement_rate": 1.0000
+        },
+        "timing": {
+          "simulated_duration_ticks": 100,
+          "wall_clock_elapsed_microseconds": 688
+        }
+      },
+      "reclamation_log": [
+        {
+          "victim_pid": 1000,
+          "victim_name": "com.weather.forecast_1",
+          "importance_tier": "Cached",
+          "importance_score": 500,
+          "cpu_priority": 83,
+          "memory_reclaimed_bytes": 189792256,
+          "policy_name": "ImportanceAware",
+          "reason": "Importance: tier Cached (score 500), resident 189792256 B, PID 1000",
+          "timestamp_ticks": 15
+        },
+        {
+          "victim_pid": 1005,
+          "victim_name": "com.trivia.quiz_6",
+          "importance_tier": "Cached",
+          "importance_score": 500,
+          "cpu_priority": 98,
+          "memory_reclaimed_bytes": 180355072,
+          "policy_name": "ImportanceAware",
+          "reason": "Importance: tier Cached (score 500), resident 180355072 B, PID 1005",
+          "timestamp_ticks": 15
+        },
+        {
+          "victim_pid": 1006,
+          "victim_name": "com.weather.forecast_7",
+          "importance_tier": "Cached",
+          "importance_score": 500,
+          "cpu_priority": 97,
+          "memory_reclaimed_bytes": 117440512,
+          "policy_name": "ImportanceAware",
+          "reason": "Importance: tier Cached (score 500), resident 117440512 B, PID 1006",
+          "timestamp_ticks": 20
+        },
+        {
+          "victim_pid": 1002,
+          "victim_name": "com.amazon.mShop_3",
+          "importance_tier": "Background",
+          "importance_score": 400,
+          "cpu_priority": 61,
+          "memory_reclaimed_bytes": 238026752,
+          "policy_name": "ImportanceAware",
+          "reason": "Importance: tier Background (score 400), resident 238026752 B, PID 1002",
+          "timestamp_ticks": 20
+        },
+        {
+          "victim_pid": 1001,
+          "victim_name": "com.dropbox.sync_2",
+          "importance_tier": "Background",
+          "importance_score": 400,
+          "cpu_priority": 69,
+          "memory_reclaimed_bytes": 206569472,
+          "policy_name": "ImportanceAware",
+          "reason": "Importance: tier Background (score 400), resident 206569472 B, PID 1001",
+          "timestamp_ticks": 20
+        },
+        {
+          "victim_pid": 1009,
+          "victim_name": "com.reddit.frontpage_10",
+          "importance_tier": "Background",
+          "importance_score": 400,
+          "cpu_priority": 55,
+          "memory_reclaimed_bytes": 185597952,
+          "policy_name": "ImportanceAware",
+          "reason": "Importance: tier Background (score 400), resident 185597952 B, PID 1009",
+          "timestamp_ticks": 20
+        }
+      ]
+    }
+  ]
+}

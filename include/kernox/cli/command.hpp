@@ -22,6 +22,9 @@ public:
     static int execute_process(const std::vector<std::string>& args);
     static int execute_ipc(const std::vector<std::string>& args);
     static int execute_sync(const std::vector<std::string>& args);
+    static int execute_experiment(const std::vector<std::string>& args);
+    static int execute_adb(const std::vector<std::string>& args);
+    static int execute_simulate(const std::vector<std::string>& args);
 };
 
 } // namespace kernox::cli

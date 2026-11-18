@@ -1,0 +1,5 @@
+scenario,seed,fingerprint,capacity_bytes,policy,reclaimed_bytes,processes_reclaimed,processes_survived,total_processes,survival_rate,fg_survival_rate,vis_survival_rate,svc_survival_rate,bg_survival_rate,cached_survival_rate,peak_used_bytes,final_used_bytes,failed_allocations,simulated_ticks,wall_clock_us
+Normal,42,WKL-ADDD094F67178309,1073741824,FIFO,0,0,10,10,1.0000,1.0000,1.0000,1.0000,1.0000,1.0000,538968064,538968064,0,100,2804
+Normal,42,WKL-ADDD094F67178309,1073741824,LRU,0,0,10,10,1.0000,1.0000,1.0000,1.0000,1.0000,1.0000,538968064,538968064,0,100,868
+Normal,42,WKL-ADDD094F67178309,1073741824,Priority,0,0,10,10,1.0000,1.0000,1.0000,1.0000,1.0000,1.0000,538968064,538968064,0,100,798
+Normal,42,WKL-ADDD094F67178309,1073741824,ImportanceAware,0,0,10,10,1.0000,1.0000,1.0000,1.0000,1.0000,1.0000,538968064,538968064,0,100,811

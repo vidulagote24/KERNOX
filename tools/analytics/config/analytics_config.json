@@ -1,0 +1,39 @@
+{
+  "general": {
+    "default_output_dir": "tools/analytics/output",
+    "figure_dpi": 300,
+    "figure_format": "png",
+    "memory_display_unit": "MB"
+  },
+  "thresholds": {
+    "moderate_utilization_ratio": 0.75,
+    "critical_utilization_ratio": 0.90
+  },
+  "visualizations": {
+    "palette": {
+      "FIFO": "#4C72B0",
+      "LRU": "#55A868",
+      "Priority": "#C44E52",
+      "ImportanceAware": "#8172B3",
+      "Foreground": "#2CA02C",
+      "Visible": "#1F77B4",
+      "Service": "#FF7F0E",
+      "Background": "#D62728",
+      "Cached": "#9467BD"
+    },
+    "dimensions": {
+      "policy_comparison": [10, 6],
+      "process_survival": [10, 5],
+      "memory_pressure": [10, 5],
+      "scenario_comparison": [11, 6],
+      "execution_performance": [8, 5],
+      "android_device_memory": [8, 5],
+      "android_process_memory": [10, 6]
+    }
+  },
+  "provenance_domains": [
+    "kernox_simulation",
+    "android_adb_observation",
+    "linux_proc_observation"
+  ]
+}

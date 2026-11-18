@@ -1,0 +1,189 @@
+{
+  "scenario_name": "BackgroundHeavy",
+  "seed": 42,
+  "workload_fingerprint": "WKL-1A599D637BBE32FE",
+  "total_capacity_bytes": 1073741824,
+  "policy_count": 4,
+  "policy_results": [
+    {
+      "policy_name": "FIFO",
+      "scenario_name": "BackgroundHeavy",
+      "seed": 42,
+      "workload_fingerprint": "WKL-1A599D637BBE32FE",
+      "metrics": {
+        "memory": {
+          "total_capacity_bytes": 1073741824,
+          "initial_used_bytes": 0,
+          "peak_used_bytes": 584056832,
+          "final_used_bytes": 584056832,
+          "average_utilization_ratio": 0.5305,
+          "total_reclaimed_bytes": 0,
+          "pressure_events_moderate": 0,
+          "pressure_events_critical": 0
+        },
+        "processes": {
+          "total_processes": 10,
+          "processes_completed": 10,
+          "processes_terminated_pressure": 0,
+          "processes_survived": 10,
+          "survival_rate": 1.0000,
+          "foreground_survival_rate": 1.0000,
+          "visible_survival_rate": 1.0000,
+          "service_survival_rate": 1.0000,
+          "background_survival_rate": 1.0000,
+          "cached_survival_rate": 1.0000
+        },
+        "reclamation": {
+          "reclamation_invocations": 0,
+          "reclamation_successes": 0,
+          "processes_reclaimed": 0,
+          "average_reclaimed_per_victim_bytes": 0.0,
+          "failed_allocations": 0,
+          "no_eligible_victim_events": 0,
+          "target_achievement_rate": 1.0000
+        },
+        "timing": {
+          "simulated_duration_ticks": 100,
+          "wall_clock_elapsed_microseconds": 2729
+        }
+      },
+      "reclamation_log": [
+      ]
+    },
+    {
+      "policy_name": "LRU",
+      "scenario_name": "BackgroundHeavy",
+      "seed": 42,
+      "workload_fingerprint": "WKL-1A599D637BBE32FE",
+      "metrics": {
+        "memory": {
+          "total_capacity_bytes": 1073741824,
+          "initial_used_bytes": 0,
+          "peak_used_bytes": 584056832,
+          "final_used_bytes": 584056832,
+          "average_utilization_ratio": 0.5305,
+          "total_reclaimed_bytes": 0,
+          "pressure_events_moderate": 0,
+          "pressure_events_critical": 0
+        },
+        "processes": {
+          "total_processes": 10,
+          "processes_completed": 10,
+          "processes_terminated_pressure": 0,
+          "processes_survived": 10,
+          "survival_rate": 1.0000,
+          "foreground_survival_rate": 1.0000,
+          "visible_survival_rate": 1.0000,
+          "service_survival_rate": 1.0000,
+          "background_survival_rate": 1.0000,
+          "cached_survival_rate": 1.0000
+        },
+        "reclamation": {
+          "reclamation_invocations": 0,
+          "reclamation_successes": 0,
+          "processes_reclaimed": 0,
+          "average_reclaimed_per_victim_bytes": 0.0,
+          "failed_allocations": 0,
+          "no_eligible_victim_events": 0,
+          "target_achievement_rate": 1.0000
+        },
+        "timing": {
+          "simulated_duration_ticks": 100,
+          "wall_clock_elapsed_microseconds": 513
+        }
+      },
+      "reclamation_log": [
+      ]
+    },
+    {
+      "policy_name": "Priority",
+      "scenario_name": "BackgroundHeavy",
+      "seed": 42,
+      "workload_fingerprint": "WKL-1A599D637BBE32FE",
+      "metrics": {
+        "memory": {
+          "total_capacity_bytes": 1073741824,
+          "initial_used_bytes": 0,
+          "peak_used_bytes": 584056832,
+          "final_used_bytes": 584056832,
+          "average_utilization_ratio": 0.5305,
+          "total_reclaimed_bytes": 0,
+          "pressure_events_moderate": 0,
+          "pressure_events_critical": 0
+        },
+        "processes": {
+          "total_processes": 10,
+          "processes_completed": 10,
+          "processes_terminated_pressure": 0,
+          "processes_survived": 10,
+          "survival_rate": 1.0000,
+          "foreground_survival_rate": 1.0000,
+          "visible_survival_rate": 1.0000,
+          "service_survival_rate": 1.0000,
+          "background_survival_rate": 1.0000,
+          "cached_survival_rate": 1.0000
+        },
+        "reclamation": {
+          "reclamation_invocations": 0,
+          "reclamation_successes": 0,
+          "processes_reclaimed": 0,
+          "average_reclaimed_per_victim_bytes": 0.0,
+          "failed_allocations": 0,
+          "no_eligible_victim_events": 0,
+          "target_achievement_rate": 1.0000
+        },
+        "timing": {
+          "simulated_duration_ticks": 100,
+          "wall_clock_elapsed_microseconds": 534
+        }
+      },
+      "reclamation_log": [
+      ]
+    },
+    {
+      "policy_name": "ImportanceAware",
+      "scenario_name": "BackgroundHeavy",
+      "seed": 42,
+      "workload_fingerprint": "WKL-1A599D637BBE32FE",
+      "metrics": {
+        "memory": {
+          "total_capacity_bytes": 1073741824,
+          "initial_used_bytes": 0,
+          "peak_used_bytes": 584056832,
+          "final_used_bytes": 584056832,
+          "average_utilization_ratio": 0.5305,
+          "total_reclaimed_bytes": 0,
+          "pressure_events_moderate": 0,
+          "pressure_events_critical": 0
+        },
+        "processes": {
+          "total_processes": 10,
+          "processes_completed": 10,
+          "processes_terminated_pressure": 0,
+          "processes_survived": 10,
+          "survival_rate": 1.0000,
+          "foreground_survival_rate": 1.0000,
+          "visible_survival_rate": 1.0000,
+          "service_survival_rate": 1.0000,
+          "background_survival_rate": 1.0000,
+          "cached_survival_rate": 1.0000
+        },
+        "reclamation": {
+          "reclamation_invocations": 0,
+          "reclamation_successes": 0,
+          "processes_reclaimed": 0,
+          "average_reclaimed_per_victim_bytes": 0.0,
+          "failed_allocations": 0,
+          "no_eligible_victim_events": 0,
+          "target_achievement_rate": 1.0000
+        },
+        "timing": {
+          "simulated_duration_ticks": 100,
+          "wall_clock_elapsed_microseconds": 523
+        }
+      },
+      "reclamation_log": [
+      ]
+    }
+  ]
+}

@@ -85,6 +85,18 @@ echo ">> Running ${BIN_PATH} ipc unix-demo"
 echo ">> Running ${BIN_PATH} ipc mq-demo"
 "${BIN_PATH}" ipc mq-demo
 
+echo ">> Running ${BIN_PATH} experiment run --scenario normal --policy importance-aware"
+"${BIN_PATH}" experiment run --scenario normal --policy importance-aware
+
+echo ">> Running ${BIN_PATH} experiment compare --scenario normal"
+"${BIN_PATH}" experiment compare --scenario normal
+
+echo ">> Running ${BIN_PATH} adb status"
+"${BIN_PATH}" adb status || true
+
+echo ">> Running ${BIN_PATH} adb devices"
+"${BIN_PATH}" adb devices || true
+
 echo "========================================================="
 echo "  KERNOX: All Verification Checks Passed Successfully!"
 echo "========================================================="

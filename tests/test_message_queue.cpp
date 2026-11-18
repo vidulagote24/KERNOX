@@ -264,11 +264,13 @@ int main() {
         auto server_q = PosixMessageQueue::create(qname, init_attr).value();
 
         PipeHandshake handshake;
+        PipeHandshake child_done;
         pid_t child = ::fork();
         KERNOX_ASSERT_TRUE(child >= 0);
 
         if (child == 0) {
             handshake.close_read();
+            child_done.close_read();
             auto client_q_res = PosixMessageQueue::open(qname, QueueAccess::ReadWrite);
             if (client_q_res.is_err()) ::_exit(1);
             auto client_q = std::move(client_q_res.value());
@@ -283,14 +285,19 @@ int main() {
             // Respond with priority
             if (client_q.send_string("PONG_FROM_CHILD", 15).is_err()) ::_exit(3);
 
+            child_done.notify();
             ::_exit(0);
         }
 
         handshake.close_write();
+        child_done.close_write();
         handshake.wait();
 
         // Send ping to child
         KERNOX_ASSERT_TRUE(server_q.send_string("PING_FROM_PARENT").is_ok());
+
+        // Wait for child to process ping and enqueue pong
+        child_done.wait();
 
         // Receive response from child
         auto resp = server_q.receive_string(0, std::chrono::milliseconds(3000));
