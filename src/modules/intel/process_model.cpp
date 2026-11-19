@@ -362,14 +362,6 @@ core::Result<void> SimulatedProcess::set_cpu_priority(uint32_t new_priority) {
     return core::Result<void>::ok();
 }
 
-sim::ProcessTask SimulatedProcess::to_task() const noexcept {
-    return sim::ProcessTask{
-        .pid = pid_,
-        .arrival_time = creation_time_ticks_,
-        .burst_time = cpu_burst_remaining_,
-        .priority = cpu_priority_
-    };
-}
 
 std::string SimulatedProcess::to_string() const {
     std::ostringstream oss;

@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.25)
 
 project(KERNOX
-    VERSION 0.1.0
-    DESCRIPTION "A Linux-Based Operating System Resource Management and Benchmarking Platform"
+    VERSION 2.0.0
+    DESCRIPTION "Android Resource Intelligence & Memory Reclamation Platform"
     LANGUAGES C CXX
 )
 
@@ -98,37 +98,10 @@ target_link_libraries(kernox_core PUBLIC
 )
 
 # -----------------------------------------------------------------------------
-# Simulation Modules: kernox_sim
-# -----------------------------------------------------------------------------
-add_library(kernox_sim STATIC
-    src/modules/sim/cpu_sched.cpp
-    src/modules/sim/disk_sched.cpp
-    src/modules/sim/deadlock.cpp
-    src/modules/sim/memory.cpp
-)
-
-target_include_directories(kernox_sim PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-)
-
-target_link_libraries(kernox_sim PUBLIC
-    kernox_core
-    kernox_compiler_flags
-)
-
-# -----------------------------------------------------------------------------
-# System Modules: kernox_system
+# System Telemetry Module: kernox_system
 # -----------------------------------------------------------------------------
 add_library(kernox_system STATIC
     src/modules/system/telemetry.cpp
-    src/modules/system/process_manager.cpp
-    src/modules/system/ipc.cpp
-    src/modules/system/shared_memory.cpp
-    src/modules/system/sync.cpp
-    src/modules/system/ring_buffer.cpp
-    src/modules/system/unix_socket.cpp
-    src/modules/system/message_queue.cpp
 )
 
 target_include_directories(kernox_system PUBLIC
@@ -139,8 +112,6 @@ target_include_directories(kernox_system PUBLIC
 target_link_libraries(kernox_system PUBLIC
     kernox_core
     kernox_compiler_flags
-    Threads::Threads
-    rt
 )
 
 # -----------------------------------------------------------------------------
@@ -157,7 +128,6 @@ target_include_directories(kernox_intel PUBLIC
 
 target_link_libraries(kernox_intel PUBLIC
     kernox_core
-    kernox_sim
     kernox_compiler_flags
 )
 
@@ -267,7 +237,6 @@ target_link_libraries(kernox_cli PUBLIC
     kernox_reclaim
     kernox_intel
     kernox_system
-    kernox_sim
     kernox_core
     kernox_compiler_flags
 )
@@ -287,7 +256,6 @@ target_link_libraries(kernox PRIVATE
     kernox_reclaim
     kernox_intel
     kernox_system
-    kernox_sim
     kernox_core
     kernox_compiler_flags
 )

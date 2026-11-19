@@ -14,6 +14,7 @@ from kernox_analytics.loader import (
 from kernox_analytics.validators import ProvenanceError, ValidationError
 
 EXAMPLES_DIR = Path(__file__).resolve().parent.parent / "examples"
+FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 
 
 def test_load_experiment_comparison_json():
@@ -53,7 +54,7 @@ def test_load_experiment_comparison_csv():
 
 
 def test_load_android_snapshot():
-    path = EXAMPLES_DIR / "android" / "pixel7_snapshot.json"
+    path = FIXTURES_DIR / "android_snapshot_fixture.json"
     ds = load_android_snapshot(path)
 
     assert ds.domain == DataDomain.ANDROID
@@ -98,6 +99,6 @@ def test_load_unsupported_extension(tmp_path):
 
 
 def test_provenance_separation_experiment_loader_rejects_android(tmp_path):
-    android_file = EXAMPLES_DIR / "android" / "pixel7_snapshot.json"
+    android_file = FIXTURES_DIR / "android_snapshot_fixture.json"
     with pytest.raises(ProvenanceError):
         load_experiment_file(android_file)

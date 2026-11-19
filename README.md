@@ -1,394 +1,343 @@
 # KERNOX 2.0
 
-**Android & Linux Resource Intelligence Platform**
+**Android Resource Intelligence & Memory Reclamation Platform**
 
 [![Language: C++20](https://img.shields.io/badge/Language-C%2B%2B20-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B20)
 [![Python: 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 [![Standard: POSIX](https://img.shields.io/badge/Standard-POSIX.1--2017-orange.svg)](https://pubs.opengroup.org/onlinepubs/9699919799/)
 [![Platform: Linux](https://img.shields.io/badge/Platform-Linux%20%7C%20WSL2-green.svg)](https://ubuntu.com/)
 [![Build: CMake & Ninja](https://img.shields.io/badge/Build-CMake%20%7C%20Ninja-red.svg)](https://cmake.org/)
-[![Sanitizers: ASan / UBSan](https://img.shields.io/badge/Sanitizers-ASan%20%7C%20UBSan-purple.svg)](https://github.com/google/sanitizers)
-[![C++ Tests: 20/20 Passed](https://img.shields.io/badge/C%2B%2B%20Tests-20%2F20%20Passed%20(100%25)-brightgreen.svg)](#15-testing-and-verification)
-[![Python Tests: 31/31 Passed](https://img.shields.io/badge/Python%20Tests-31%2F31%20Passed%20(100%25)-brightgreen.svg)](#15-testing-and-verification)
+[![C++ Tests: 11/11 Passed](https://img.shields.io/badge/C%2B%2B%20Tests-11%2F11%20Passed%20(100%25)-brightgreen.svg)](#12-testing--verification)
+[![Python Tests: 36/36 Passed](https://img.shields.io/badge/Python%20Tests-36%2F36%20Passed%20(100%25)-brightgreen.svg)](#12-testing--verification)
 
 ---
 
-## 1. Project Title & Introduction
+## 1. Project Title & Overview
 
-**KERNOX 2.0: Android & Linux Resource Intelligence Platform** is an operating systems simulation platform, systems engineering runtime, and resource management laboratory implemented in modern ISO C++20 and Python 3.11+.
+**KERNOX 2.0** is an **Android Resource Intelligence & Memory Reclamation Platform** developed in modern ISO C++20 and Python 3.11+.
 
-KERNOX bridges the gap between classic theoretical operating systems algorithms and modern resource-constrained mobile and embedded operating systems. The platform combines:
-1. **Classical OS Simulation Engine:** Deterministic scheduling, virtual memory paging, and deadlock avoidance.
-2. **Production-Grade Linux Systems Programming:** Low-level process supervision, `/proc` telemetry, and high-performance POSIX IPC.
-3. **Android-Inspired Process Intelligence:** Importance classification, lifecycle states, and memory footprint accounting.
-4. **Memory Pressure Detection & Reclamation Engine:** Configurable moderate (75%) and critical (90%) thresholds with FIFO, LRU, Priority, and ImportanceAware eviction policies.
-5. **Deterministic Workload Generation & Benchmarking:** Five reproducible workload scenarios with JSON and CSV structured exporters.
-6. **Read-Only Android ADB Subsystem:** Live device discovery, memory inspection (`/proc/meminfo`, `dumpsys meminfo`), and process observation with strict safety boundaries.
-7. **Python Analytics & Publication Visualization Layer:** Headless validation, non-additive memory metrics, trade-off evaluation, publication-quality figures, and Markdown reports.
+The platform models, benchmarks, and evaluates operating system resource management under memory pressure, inspired by Android's Low Memory Killer Daemon (LMKD) and Linux kernel memory management. It unites pure user-space simulation, real Linux host telemetry, passive Android observation via ADB, an interactive menu-driven simulator, and a decoupled Python analytics and visualization pipeline.
 
----
-
-## 2. Problem Statement
-
-Modern computing systems face severe memory constraints, particularly in mobile and embedded environments where physical RAM is strictly bounded and swapping to flash storage causes prohibitive write amplification, latency spikes, and battery degradation.
-
-Traditional operating systems education and research platforms suffer from three major shortcomings:
-- **Toy Academic Simulators:** High-level simulators fail to expose real systems programming constraints, relying on runtime garbage collection and artificial abstractions detached from real kernel interfaces.
-- **Unstructured Kernel Labs:** Native C kernel programming assignments introduce steep learning curves and undefined behaviors without providing reproducible, comparative benchmarking frameworks.
-- **The Mobile Memory Reclamation Gap:** Standard OS curricula focus on virtual memory page replacement (e.g., FIFO, LRU) while ignoring how modern production operating systems (such as Android and Linux cgroups) detect systemic memory pressure and reclaim whole-process memory while safeguarding user-facing foreground tasks.
+The repository is focused strictly on six functional demonstration areas:
+1. **Project Status & System Health:** Live Linux `/proc` telemetry (CPU, RAM, load averages, uptime), type-safe monadic error handling (`Result<T, Error>`), and modular CLI dispatching.
+2. **Interactive Android Resource Simulator:** Terminal-driven interactive dashboard with 10 discrete operations, custom process creation, clock advancement, pressure injection, ASCII visualizations, safe export confirmation, and independent project-root discovery.
+3. **Memory Pressure Detection & Reclamation Engine:** Dynamic memory pressure detection (Moderate at 75%, Critical at 90%) and four memory reclamation algorithms (FIFO, LRU, Priority, and Android-inspired Importance-Aware).
+4. **Workload Experiment & Benchmark Comparison:** Deterministic workload generation across 5 scenarios (`Normal`, `HighMemoryPressure`, `BackgroundHeavy`, `ForegroundProtection`, `Mixed`) and comparative multi-policy benchmarking.
+5. **Android ADB Telemetry & Observation:** Passive, read-only Android device discovery, memory observation (`dumpsys meminfo`), process inspection, and offline snapshot parsing.
+6. **Python Analytics Platform:** Automated dataset schema validation, non-additive memory metrics computation, statistical analysis, publication-grade figure generation, and markdown reporting.
 
 ---
 
-## 3. Motivation
+## 2. Problem Statement & Motivation
 
-KERNOX 2.0 was developed to demystify whole-process memory reclamation and resource management by creating an open, reproducible, laboratory-grade platform. Inspired by Android's Low Memory Killer Daemon (LMKD) and Linux kernel memory pressure mechanisms, KERNOX models how processes transition across lifecycle tiers, tracks aggregate memory footprints, detects systemic pressure events, and evaluates reclamation trade-offs under identical synthetic workloads.
+Modern mobile and embedded operating systems operate under severe memory constraints where physical RAM is strictly bounded. Traditional virtual memory swapping to flash storage is either disabled or severely throttled due to flash write endurance limits, high I/O latency, and battery drain.
 
-Crucially, KERNOX enforces **strict data and execution provenance**:
-- Pure mathematical simulations run in user-space without interfering with host or target processes.
-- Android ADB observation is strictly passive and read-only, ensuring physical devices and emulators are never altered.
-- Python analytics operates strictly as an offline consumer of structured data without build-time or runtime coupling to the C++ core.
+When system memory approaches exhaustion, production operating systems (such as Android via LMKD and Linux via cgroups/OOM killer) must actively detect memory pressure and reclaim whole processes while safeguarding user-facing foreground applications.
 
----
-
-## 4. Main Objectives
-
-1. **Establish Multi-Domain Architectural Separation:** Maintain strict isolation between simulated user-space processes, live Linux host telemetry, and passive Android ADB observations.
-2. **Implement Process Intelligence (`kernox_intel`):** Model simulated application processes with strongly typed identifiers (`SimulatedPid`), lifecycle transitions, CPU scheduling priorities, and Android-inspired importance tiers (`Foreground`, `Visible`, `Service`, `Background`, `Cached`).
-3. **Build Memory Pressure & Reclamation Engine (`kernox_reclaim`):** Detect moderate (75%) and critical (90%) pressure thresholds and implement four distinct victim selection policies:
-   - **FIFO:** Arrival-order eviction.
-   - **LRU:** Recency-order eviction based on access timestamps.
-   - **Priority:** Eviction of processes with lowest static priority.
-   - **ImportanceAware:** Tiered eviction protecting foreground and visible processes while systematically reclaiming background and cached processes.
-4. **Deliver Deterministic Experimentation (`kernox_experiment`):** Execute identical workloads across multiple policies with fixed PRNG seeds and export results in standardized JSON and CSV formats across five scenarios: `Normal`, `HighMemoryPressure`, `BackgroundHeavy`, `ForegroundProtection`, and `Mixed`.
-5. **Passive Android Observation Subsystem (`kernox_adb`):** Query attached Android devices via ADB for hardware specifications, memory statistics, and process hierarchies without modifying target state.
-6. **Publication-Ready Analytics (`tools/analytics`):** Provide reproducible data loading, strict schema validation, statistical moments, non-additive memory accounting, publication-quality Matplotlib figures, and automated Markdown reports.
+KERNOX 2.0 provides an open, reproducible, laboratory-grade platform to:
+- Model how mobile processes transition across Android importance tiers (`Foreground`, `Visible`, `Service`, `Background`, `Cached`).
+- Evaluate memory reclamation policies under identical synthetic workloads.
+- Prove why importance-aware reclamation prevents priority inversion and guarantees foreground application survival compared to traditional FIFO, LRU, or static Priority policies.
+- Bridge live system telemetry (Linux `/proc` and Android ADB) with automated statistical analytics and publication-grade visualizations.
 
 ---
 
-## 5. Architecture Overview
+## 3. Strict Architectural Duality & Provenance Separation
 
-```
-+-------------------------------------------------------------------------------------------------------+
-|                                              KERNOX CLI                                               |
-|               status | schedule | disk | deadlock | memory | process | ipc | sync | experiment | adb     |
-+-------------------------------------------------------------------------------------------------------+
-                                                   |
-         +-----------------------------------------+-----------------------------------------+
-         |                                                                                   |
-         v                                                                                   v
-+-----------------------------------+                             +-----------------------------------+
-|      Simulation Subsystem         |                             |     Live Systems Subsystem        |
-|  - kernox_sim (CPU, Disk, VM)     |                             |  - kernox_system                  |
-|  - kernox_intel (Process Model)   |                             |    * ProcessManager (rlimit, rus) |
-|  - kernox_reclaim (Engine & Pol)  |                             |    * SystemTelemetry (/proc)      |
-|  - kernox_experiment (Workloads)  |                             |    * POSIX IPC (Pipes, SHM, MQ)   |
-+-----------------------------------+                             |    * Sync (Robust Mutex, RingBuf) |
-         |                                                        +-----------------------------------+
-         | (Structured JSON/CSV Export)                                                      |
-         v                                                                                   v
-+-----------------------------------+                             +-----------------------------------+
-|  tools/analytics (Python 3.11+)   |                             |  kernox_adb (Passive Telemetry)   |
-|  - Ingestion & Validation         |                             |  - Device Discovery               |
-|  - Non-Additive Memory Metrics    |                             |  - /proc/meminfo & dumpsys        |
-|  - 5-Scenario Trade-off Analysis  |                             |  - Read-Only Observation Boundary |
-|  - Matplotlib High-DPI Figures    |                             +-----------------------------------+
-|  - Consolidated Markdown Reports  |                                                |
-+-----------------------------------+                                                v
-                                                                  +-----------------------------------+
-                                                                  |   Android Device / Emulator (AVD) |
-                                                                  |   Read-Only ADB Interface         |
-                                                                  +-----------------------------------+
+KERNOX enforces **strict domain separation** between simulation and live hardware:
+
+| Domain | Tag | Description |
+| :--- | :--- | :--- |
+| **Simulation** | `kernox_simulation` | Pure user-space simulation data generated by deterministic C++ engines. Completely reproducible from PRNG seed. |
+| **Android Observation** | `android_adb_observation` | Real telemetry passively collected from Android devices/emulators via read-only ADB commands. |
+| **Linux Host Telemetry** | `linux_proc_observation` | Real host telemetry read directly from `/proc` on the local Linux/WSL2 system. |
+
+*Simulated and real hardware datasets are strictly segregated. Attempting to cross-validate or co-mingle them triggers validation errors in the analytics pipeline.*
+
+---
+
+## 4. Architecture & Subsystems
+
+```text
+                                  +-----------------------+
+                                  |      kernox (main)    |
+                                  +-----------------------+
+                                              |
+                                              v
+                                  +-----------------------+
+                                  |       kernox_cli      |
+                                  +-----------------------+
+                                              |
+              +-------------------------------+-------------------------------+
+              |                               |                               |
+              v                               v                               v
+    +-------------------+           +-------------------+           +-------------------+
+    |  kernox_simulator |           |     kernox_adb    |           |   kernox_system   |
+    +-------------------+           +-------------------+           +-------------------+
+              |                               |                               |
+              v                               | (read-only adb CLI)           | (/proc telemetry)
+    +-------------------+                     |                               v
+    | kernox_experiment |                     |                     +-------------------+
+    +-------------------+                     |                     |    kernox_core    |
+              |                               |                     +-------------------+
+              v                               |                               ^
+    +-------------------+                     |                               |
+    |   kernox_reclaim  |                     +---------------+---------------+
+    +-------------------+                                     |
+              |                                               |
+              v                                               |
+    +-------------------+                                     |
+    |    kernox_intel   |                                     |
+    +-------------------+                                     |
+              |                                               |
+              +-----------------------------------------------+
 ```
 
-### Architectural Boundaries & Data Provenance
-KERNOX enforces strict domain separation:
-1. `kernox_simulation`: Pure virtual simulation data generated by deterministic C++ engines.
-2. `android_adb_observation`: Real-time telemetry passively collected from Android devices.
-3. `linux_proc_observation`: Real-time host telemetry collected from the host Linux kernel.
+### Subsystems Summary
 
-Simulated and real telemetry are never conflated or co-mingled.
-
----
-
-## 6. Technology Stack
-
-- **Core Simulation & Systems Language:** Modern ISO C++20 (`-std=c++20`, strict flags `-Wall -Wextra -Wpedantic -Wconversion -Werror`).
-- **Analytics & Visualization Layer:** Python 3.11+ (`pandas>=2.2.0`, `numpy>=1.26.0`, `matplotlib>=3.8.0`, `pytest>=8.0.0`).
-- **Build System:** CMake 3.25+ with Ninja generator and CMake Presets.
-- **Compilers:** GCC 13.3.0+ / Clang 16+.
-- **Host Platform:** Ubuntu 24.04 LTS under WSL2 / Native Linux Kernel 6.6+.
-- **System Libraries:** `pthread` (POSIX Threads & Robust Mutexes), `rt` (POSIX Realtime Extensions & Message Queues).
-- **Sanitizers:** AddressSanitizer (`ASan`), UndefinedBehaviorSanitizer (`UBSan`).
-
----
-
-## 7. Main Modules
-
-| Library Target | Path | Purpose |
+| Target | Location | Description |
 | :--- | :--- | :--- |
 | **`kernox_core`** | `src/core/`, `include/kernox/core/` | Foundational primitives: `Result<T, Error>`, `UniqueFd`, `ChildProcess`, `Timer`, `Logger`. |
-| **`kernox_sim`** | `src/modules/sim/`, `include/kernox/modules/sim/` | Classical OS algorithms: CPU, Disk, Deadlock, Memory Management. |
-| **`kernox_system`**| `src/modules/system/`, `include/kernox/modules/system/` | Real Linux systems facilities: ProcessManager, Telemetry, Pipes, FIFOs, SHM, Sync, UNIX Sockets, MQs. |
-| **`kernox_intel`** | `src/modules/intel/`, `include/kernox/modules/intel/` | Process intelligence: `SimulatedProcess`, `SimulatedPid`, importance tiers, lifecycle state machine. |
-| **`kernox_reclaim`**| `src/modules/reclaim/`, `include/kernox/modules/reclaim/` | Memory pressure detector, reclamation engine, and policies (FIFO, LRU, Priority, ImportanceAware). |
-| **`kernox_experiment`**| `src/modules/experiment/`, `include/kernox/modules/experiment/`| Deterministic workload generators, multi-policy experiment runner, JSON and CSV exporters. |
-| **`kernox_adb`** | `src/modules/adb/`, `include/kernox/modules/adb/` | Read-only Android ADB bridge, parser, and service. |
-| **`kernox_cli`** | `src/cli/`, `include/kernox/cli/` | Command dispatcher, CLI options, tabular formatters, and demo runners. |
-| **`tools/analytics`**| `tools/analytics/` | Standalone Python package for validation, statistical evaluation, chart rendering, and reports. |
+| **`kernox_system`** | `src/modules/system/`, `include/kernox/modules/system/` | Live Linux `/proc` host telemetry parser and collector (`telemetry.cpp`). |
+| **`kernox_intel`** | `src/modules/intel/`, `include/kernox/modules/intel/` | Process intelligence model: `SimulatedProcess`, `ProcessImportance` (5 tiers), lifecycle state machine. |
+| **`kernox_reclaim`** | `src/modules/reclaim/`, `include/kernox/modules/reclaim/` | Memory pressure detector (Moderate/Critical), reclamation engine, and 4 policies (FIFO, LRU, Priority, ImportanceAware). |
+| **`kernox_experiment`** | `src/modules/experiment/`, `include/kernox/modules/experiment/` | Deterministic workload generator (5 scenarios), ExperimentRunner, JSON and CSV exporters. |
+| **`kernox_adb`** | `src/modules/adb/`, `include/kernox/modules/adb/` | Passive read-only Android ADB observation service, dumpsys parser, process tables. |
+| **`kernox_simulator`** | `src/modules/simulator/`, `include/kernox/modules/simulator/` | Interactive menu, custom workload builder, terminal reader, ASCII visualizer, and Python analytics bridge. |
+| **`kernox_cli`** | `src/cli/`, `include/kernox/cli/` | Command dispatcher and CLI argument parser. |
+| **`tools/analytics`** | `tools/analytics/` | Decoupled Python analytics package for validation, statistics, publication chart rendering, and markdown reports. |
 
 ---
 
-## 8. Key Operating Systems Concepts Demonstrated
+## 5. Technology Stack
 
-1. **CPU Scheduling:** FCFS, Shortest Job First (SJF), Shortest Remaining Time First (SRTF), Round Robin (RR), Priority, and Multilevel Feedback Queue (MLFQ) with dynamic arrivals and ASCII Gantt charts.
-2. **Disk Arm Scheduling:** FCFS, SSTF, SCAN (Elevator), C-SCAN, LOOK, and C-LOOK with head movement accounting.
-3. **Deadlock Management:** Dijkstra's Banker's Algorithm, dynamic safety checks with state rollback, multi-instance resource detection, and Resource Allocation Graph (RAG) cycle detection via Tarjan's algorithm.
-4. **Virtual Memory Management:** First-fit, Best-fit, Worst-fit, Next-fit dynamic partitioning; MMU two-level page translation; FIFO, LRU, and Optimal (Bélady's MIN) page replacement; Peter Denning's Working-Set model.
-5. **Memory Pressure Detection:** Dynamic utilization monitoring with hysteresis, separating Moderate Pressure (75%) from Critical Pressure (90%).
-6. **Whole-Process Memory Reclamation:** Evaluating eviction order strategies (arrival order, recency, static priority, and tiered importance) under memory exhaustion.
-7. **Priority Inversion vs Foreground Protection:** Demonstrating why non-importance-aware policies suffer priority inversion by terminating user-visible foreground tasks under pressure, while `ImportanceAware` guarantees foreground survival.
-8. **Real Linux Systems Programming:** Sandboxed child processes, signal escalation (`SIGTERM` -> `SIGKILL`), POSIX resource limits (`setrlimit`), `wait4` rusage accounting, atomic ring buffers, and robust process-shared mutexes (`PTHREAD_MUTEX_ROBUST`).
-9. **Non-Additive Memory Accounting:** Modeling `/proc/meminfo` accurately, respecting that `MemAvailable` overlaps with `MemFree` and reclaimable cache.
+- **Core Language:** Modern ISO C++20 (`-std=c++20`, `-Wall -Wextra -Wpedantic -Wconversion -Werror`).
+- **Build System:** CMake 3.25+ with Ninja generator and CMake Presets.
+- **Compilers:** GCC 13.3+ / Clang 18+.
+- **Host OS:** Linux / Ubuntu 24.04 LTS under WSL 2 (Kernel 6.6+).
+- **Analytics Layer:** Python 3.11+ (`pandas>=2.2.0`, `numpy>=1.26.0`, `matplotlib>=3.8.0`, `pytest>=8.0.0`).
+- **Mobile Interface:** Read-only Android Debug Bridge (`adb`).
 
 ---
 
-## 9. Installation & System Requirements
+## 6. Installation & Prerequisites
 
-### Host Prerequisites
-- Linux or Windows Subsystem for Linux 2 (WSL2 with Ubuntu 22.04 or 24.04).
-- C++20 compliant compiler: GCC 13+ or Clang 16+.
-- Build tools: CMake (>= 3.25) and Ninja (>= 1.11).
-- Python (>= 3.11) with `python3-venv`.
-- Optional: `adb` (`android-tools-adb`) for real Android observation.
-
-### Quick Setup (Ubuntu / Debian / WSL2)
+### Ubuntu / Debian / WSL 2
 ```bash
 sudo apt update
 sudo apt install -y build-essential cmake ninja-build python3 python3-venv python3-pip
 ```
 
+Optional (for live Android device observation):
+```bash
+sudo apt install -y android-tools-adb
+```
+
 ---
 
-## 10. Build Instructions
+## 7. Build Instructions
 
-KERNOX uses CMake Presets for reproducible builds:
+KERNOX uses CMake Presets for reproducible, standardized builds:
 
 ```bash
-# 1. Debug Build (default for development and testing)
-cmake --preset dev-debug
-cmake --build --preset dev-debug
-
-# 2. Optimized Release Build
+# 1. Release Build (optimized for benchmarking)
 cmake --preset dev-release
-cmake --build --preset dev-release
+ninja -C build/release
 
-# 3. AddressSanitizer & UndefinedBehaviorSanitizer Build
-cmake --preset dev-asan
-cmake --build --preset dev-asan
+# 2. Debug Build (with debug symbols and assertions)
+cmake --preset dev-debug
+ninja -C build/debug
 ```
 
-Binary executables are written to `build/<preset>/bin/kernox`.
+The compiled binary is written to `build/<preset>/bin/kernox`.
 
 ---
 
-## 11. Command-Line Interface (CLI) Usage
+## 8. Command-Line Interface (CLI) Usage
 
-The unified `kernox` binary provides intuitive subcommands:
-
+### Platform Status & Host Telemetry
 ```bash
-# Display general help and version
-./build/debug/bin/kernox --help
-./build/debug/bin/kernox --version
+# Inspect system status and live Linux /proc telemetry
+./build/release/bin/kernox status
 
-# System status and live Linux /proc telemetry
-./build/debug/bin/kernox status
-
-# Internal core self-tests
-./build/debug/bin/kernox self-test
-
-# Classical CPU scheduling simulation
-./build/debug/bin/kernox schedule --algorithm srtf --workload arrivals
-
-# Classical memory page replacement simulation
-./build/debug/bin/kernox memory replace --algorithm lru --workload page-reference-demo --frames 3
-
-# Real Linux IPC & synchronization demos
-./build/debug/bin/kernox sync demo
-./build/debug/bin/kernox ipc unix-demo
-./build/debug/bin/kernox ipc mq-demo
+# Run deterministic internal core health checks
+./build/release/bin/kernox self-test
 ```
 
----
-
-## 12. Experimentation & Memory Reclamation Examples
-
-Run deterministic workloads and compare memory reclamation policies:
-
+### Interactive Android Resource Simulator
 ```bash
-# 1. Run a single workload experiment under ImportanceAware policy
-./build/debug/bin/kernox experiment run \
+# Launch interactive 10-option simulation menu
+./build/release/bin/kernox simulate android
+
+# Shortcut alias
+./build/release/bin/kernox sim android
+```
+
+### Memory Reclamation Workloads & Benchmarks
+```bash
+# Run a single workload experiment under Importance-Aware policy
+./build/release/bin/kernox experiment run \
   --scenario high-pressure \
   --policy importance-aware \
   --capacity 1073741824 \
   --format text
 
-# 2. Compare all 4 policies on identical workload and export JSON
-./build/debug/bin/kernox experiment compare \
+# Compare all 4 policies on identical workload and export to JSON
+./build/release/bin/kernox experiment compare \
   --scenario high-pressure \
   --seed 42 \
   --capacity 1073741824 \
   --format json \
-  --output tools/analytics/output/high_pressure_comparison.json
+  --output comparison.json
 
-# 3. Export CSV comparison for spreadsheet analysis
-./build/debug/bin/kernox experiment compare \
+# Export comparative metrics to CSV
+./build/release/bin/kernox experiment compare \
   --scenario high-pressure \
-  --seed 42 \
-  --capacity 1073741824 \
   --format csv \
-  --output tools/analytics/output/high_pressure_comparison.csv
+  --output comparison.csv
+```
+
+### Android ADB Telemetry Observation (Read-Only)
+```bash
+# Inspect ADB bridge availability and device status
+./build/release/bin/kernox adb status
+
+# Discover attached physical or virtual Android devices
+./build/release/bin/kernox adb devices
+
+# Inspect Android memory snapshot
+./build/release/bin/kernox adb memory --format json
+
+# Inspect active Android processes and memory footprints
+./build/release/bin/kernox adb processes --format json
 ```
 
 ---
 
-## 13. Android ADB Setup & Usage
+## 9. Python Analytics & Publication Visualizations
 
-The Android subsystem is strictly read-only and passive:
-
-```bash
-# Check ADB binary availability and service status
-./build/debug/bin/kernox adb status
-
-# List connected physical or virtual Android devices
-./build/debug/bin/kernox adb devices
-
-# Inspect Android memory telemetry (RAM composition, dumpsys meminfo)
-./build/debug/bin/kernox adb memory --format json --output snapshot_mem.json
-
-# Inspect active Android processes, PSS, RSS, and normalized importance tiers
-./build/debug/bin/kernox adb processes --format json --output snapshot_proc.json
-
-# Capture consolidated device observation snapshot
-./build/debug/bin/kernox adb snapshot --format json --output snapshot_full.json
-```
-
-*Note: If no Android device is connected, KERNOX reports device absence gracefully and continues all simulation and benchmarking functions without error.*
-
----
-
-## 14. Python Analytics & Visualization Setup
-
-The Python analytics package resides in `tools/analytics/`:
+The companion Python package in `tools/analytics/` performs schema validation, trade-off analysis, publication figure generation, and markdown reporting:
 
 ```bash
-# 1. Create and activate dedicated virtual environment
-python3 -m venv tools/analytics/.venv
-source tools/analytics/.venv/bin/activate
+# Set Python path
+export PYTHONPATH="tools/analytics/src:${PYTHONPATH:-}"
 
-# 2. Install pinned dependencies
-pip install -r tools/analytics/requirements.txt
+# 1. Validate dataset schemas and domain provenance
+python3 -m kernox_analytics.cli validate --input build/demo_output
 
-# 3. Validate dataset schemas and domain isolation
-PYTHONPATH=tools/analytics/src python3 -m kernox_analytics.cli validate \
-  --input tools/analytics/examples/experiments
+# 2. Analyze multi-policy comparison and generate publication figures
+python3 -m kernox_analytics.cli analyze \
+  --input comparison.json \
+  --output analytics_output/
 
-# 4. Generate experiment trade-off charts and Markdown summary report
-PYTHONPATH=tools/analytics/src python3 -m kernox_analytics.cli analyze \
-  --input tools/analytics/output/high_pressure_comparison.json \
-  --output tools/analytics/output
-
-# 5. Evaluate multi-scenario performance across all 5 scenarios
-PYTHONPATH=tools/analytics/src python3 -m kernox_analytics.cli compare \
+# 3. Evaluate multi-scenario trade-offs across all 5 workload scenarios
+python3 -m kernox_analytics.cli compare \
   --input tools/analytics/examples/experiments \
-  --output tools/analytics/output
-
-# 6. Analyze real or emulated Android telemetry snapshot
-PYTHONPATH=tools/analytics/src python3 -m kernox_analytics.cli android \
-  --input tools/analytics/examples/android/pixel7_snapshot.json \
-  --output tools/analytics/output
+  --output analytics_output/
 ```
 
 ---
 
-## 15. Testing & Verification
+## 10. Interactive Simulator Features
 
-KERNOX features comprehensive automated verification suites covering both C++20 core libraries and Python analytics.
+The interactive simulator (`kernox simulate android`) features a complete 10-operation menu:
+1. **Inspect System Status & Telemetry:** Host `/proc` metrics and readiness checks.
+2. **Display Active Process Table:** Aligned view of PID, app name, Android importance tier, CPU priority, and resident memory.
+3. **Create Custom Process:** Interactive wizard to admit custom processes with specific priorities and memory footprints.
+4. **Advance Simulation Clock (Ticks):** Step-by-step clock advancement with CPU burst consumption and dynamic memory events.
+5. **Inject Memory Pressure Event:** Simulate memory allocation spikes to induce Moderate (75%) and Critical (90%) pressure.
+6. **Trigger Memory Reclamation Policy:** Manually run FIFO, LRU, Priority, or ImportanceAware reclamation.
+7. **Run Full Workload Simulation Scenario:** Execute complete lifecycle simulation against built-in scenarios.
+8. **Run Multi-Policy Comparative Benchmark:** Execute all 4 policies against an identical workload seed.
+9. **Render ASCII Memory & Lifecycle Visualizations:** Clean terminal text charts showing memory breakdown and policy evictions.
+10. **Export Results & Run Python Analytics:** Safe JSON export with overwrite confirmation, `/proc/self/exe` project-root discovery, and automated Python analytics invocation.
 
-### Running C++ Test Suites & CLI Smoke Tests
-Use the repository verification script:
+---
+
+## 11. Four Memory Reclamation Policies Compared
+
+| Policy | Eviction Strategy | Foreground Protection | Android LMKD Alignment |
+| :--- | :--- | :--- | :--- |
+| **FIFO** | Evicts oldest admitted process | None (victims selected purely by arrival order) | Low |
+| **LRU** | Evicts least-recently active process | Weak (vulnerable if foreground app is idle) | Moderate |
+| **Priority** | Evicts process with worst CPU priority | Flawed (CPU urgency does not correlate to user importance) | Low |
+| **Importance-Aware** | Reclaims Cached -> Background -> Service -> Visible -> Foreground | Guaranteed (User-facing foreground tasks preserved) | High (Mirrors LMKD) |
+
+---
+
+## 12. Testing & Verification
+
+KERNOX features comprehensive automated test suites covering C++ core engines and Python analytics:
+
+### 1. Run C++ Test Suite (11 Test Executables)
 ```bash
-# Verify Debug preset (20/20 CTest suites + CLI smoke tests)
-./scripts/test.sh dev-debug
+# Release build CTest verification
+ctest --test-dir build/release --output-on-failure
 
-# Verify Release preset
+# Debug build CTest verification
+ctest --test-dir build/debug --output-on-failure
+```
+
+### 2. Run Python Analytics Test Suite (36 Unit Tests)
+```bash
+PYTHONPATH=tools/analytics/src ./.venv/bin/pytest tools/analytics/tests -v
+```
+
+### 3. Run Automated Smoke Test Script
+```bash
 ./scripts/test.sh dev-release
-
-# Verify ASan / UBSan preset (zero memory leaks, zero UB)
-./scripts/test.sh dev-asan
 ```
 
-### Running Python Test Suite
-```bash
-PYTHONPATH=tools/analytics/src ./tools/analytics/.venv/bin/pytest tools/analytics/tests -v
-```
-
-### Automated End-to-End Demonstration Script
-Execute the complete multi-phase demonstration:
+### 4. Run Full End-to-End Demonstration Script
 ```bash
 ./scripts/demo_kernox.sh
 ```
 
 ---
 
-## 16. Technical Limitations & Boundaries
-
-1. **User-Space Simulation:** Memory reclamation algorithms and process life cycles are simulated in user-space. They demonstrate theoretical operating systems and LMKD concepts without modifying host Linux or Android kernel memory management.
-2. **Passive Android Observation:** The ADB subsystem is strictly read-only. KERNOX never issues kill, force-stop, remount, or package management commands to attached devices.
-3. **Host Latency vs Algorithmic Complexity:** Reported wall-clock execution times reflect host hardware benchmark runtime rather than formal asymptotic complexity proofs.
-4. **WSL2 ThreadSanitizer Limitation & Concurrency Testing:** Under WSL2 kernels, ThreadSanitizer (`dev-tsan`) encounters a known Linux VMA address mapping conflict (`FATAL: ThreadSanitizer: unexpected memory mapping`), meaning dynamic data-race detection is unavailable in this environment. AddressSanitizer and UndefinedBehaviorSanitizer (`dev-asan`) are fully verified and pass 100% for memory safety (bounds, lifetime, leaks, UB), but do not detect data races. Concurrency correctness is instead verified through 20 automated multi-process synchronization tests (`test_sync`) and 5-iteration stress testing (`stress_test.sh`).
-5. **PID Type Aliases:** `SimulatedPid` and `AndroidPid` are implemented as `using` type aliases of `uint32_t`. While domain separation is maintained architecturally (simulation logic never includes process-killing kernel APIs, and the ADB subsystem provides no execution endpoints), the type system does not enforce compile-time separation against interchangeable assignment. Strong wrapper structs are recommended for absolute compile-time enforcement.
-
----
-
-## 17. Repository Structure
+## 13. Repository Structure
 
 ```text
 KERNOX/
-├── CMakeLists.txt                         # Root CMake build configuration
-├── CMakePresets.json                      # Build & test presets (debug, release, asan, tsan)
+├── CMakeLists.txt                         # Root CMake build configuration (VERSION 2.0.0)
+├── CMakePresets.json                      # Build & test presets (dev-debug, dev-release)
 ├── README.md                              # Main project documentation
 ├── scripts/
-│   ├── test.sh                            # Automated build and CTest verification runner
-│   ├── stress_test.sh                     # Concurrency stress tester
+│   ├── test.sh                            # Automated build and CTest smoke test runner
 │   └── demo_kernox.sh                     # Automated end-to-end demonstration script
 ├── include/kernox/
 │   ├── core/                              # Result<T>, UniqueFd, ChildProcess, Timer, Logger
 │   ├── modules/
-│   │   ├── sim/                           # Classical CPU, Disk, Deadlock, Memory algorithms
-│   │   ├── system/                        # Real Linux ProcessManager, /proc Telemetry, IPC, Sync
 │   │   ├── intel/                         # Process intelligence, SimulatedProcess, Importance
 │   │   ├── reclaim/                       # Pressure detector, reclamation engine & policies
 │   │   ├── experiment/                    # Workload generation, benchmark runner, exporters
-│   │   └── adb/                           # Read-only ADB types, parser, bridge, service
+│   │   ├── adb/                           # Read-only ADB types, parser, bridge, service
+│   │   ├── simulator/                     # Interactive menu, ASCII visualizer, analytics bridge
+│   │   └── system/                        # Linux /proc system telemetry
 │   └── cli/                               # CLI command dispatcher and formatters
-├── src/                                   # Source implementations matching include/
-├── tests/                                 # 20 automated C++ CTest test suites
+├── src/                                   # C++20 source implementations matching include/
+├── tests/                                 # 11 automated C++ CTest test suites
 │   ├── fixtures/adb/                      # Validated Android ADB dumpsys & /proc fixtures
 │   └── CMakeLists.txt                     # Test registrations
 ├── tools/analytics/                       # Standalone Python analytics package
 │   ├── requirements.txt                   # Pinned Python dependencies
 │   ├── config/analytics_config.json       # Thresholds and visualization themes
 │   ├── src/kernox_analytics/              # Ingestion, validation, metrics, charts, reports
-│   ├── tests/                             # 31 automated pytest unit tests
+│   ├── tests/                             # 36 automated pytest unit tests
+│   │   └── fixtures/                      # Test snapshot fixtures
 │   └── examples/                          # Authoritative experiment and snapshot samples
-└── docs/                                  # Architectural specifications, roadmaps, and reports
+└── docs/                                  # Technical specifications and guides
+    ├── ARCHITECTURE.md                    # Core architectural specification
+    ├── ANDROID_SIMULATOR.md               # Interactive simulator user & developer guide
+    ├── PROCESS_INTELLIGENCE.md            # Mobile process lifecycle & importance model
+    ├── MEMORY_RECLAMATION.md              # Pressure detection and reclamation policies
+    ├── EXPERIMENT_ENGINE.md               # Deterministic workload benchmarking engine
+    ├── ANDROID_ADB_INTEGRATION.md         # Passive Android observation subsystem
+    ├── PYTHON_ANALYTICS.md                # Python analytics & visualization layer
+    ├── DEMONSTRATION_GUIDE.md             # Complete viva/demonstration walkthrough
+    ├── SYSTEM_TELEMETRY.md                # Linux /proc telemetry documentation
+    ├── TESTING.md                         # Automated verification & test guide
+    ├── LIMITATIONS_AND_FUTURE_SCOPE.md    # Scope boundaries and future directions
+    ├── VIVA_QUESTIONS.md                  # Comprehensive viva defense questions & answers
+    └── CLI_REFERENCE.md                   # Full command-line reference
 ```
-
----
-
-## 18. Future Scope
-
-1. **eBPF Memory Telemetry:** Integrate extended BPF (eBPF) tracepoints to observe kernel page cache reclaims (`shrink_inactive_list`) on Linux hosts.
-2. **Pressure Stall Information (PSI):** Ingest real-time Linux PSI (`/proc/pressure/memory`) metrics alongside Android ADB observations.
-3. **Interactive Terminal Dashboard:** Develop a terminal UI (TUI) using ncurses for live, interactive visualization of simulated memory pressure queues.
-4. **Multi-Node Distributed Experiments:** Extend workload orchestration to evaluate memory pressure trade-offs across distributed container clusters.

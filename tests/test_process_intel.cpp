@@ -1,5 +1,4 @@
 #include "kernox/modules/intel/process_model.hpp"
-#include "kernox/modules/sim/cpu_sched.hpp"
 #include "test_harness.hpp"
 
 #include <iostream>
@@ -8,7 +7,6 @@
 
 using namespace kernox::intel;
 using namespace kernox::core;
-namespace sim = kernox::sim;
 
 static int test_process_creation_and_pid_allocation() {
     std::cout << "Running test_process_creation_and_pid_allocation...\n";
@@ -396,8 +394,8 @@ static int test_cpu_priority_and_importance_orthogonality() {
     return 0;
 }
 
-static int test_cpu_burst_consumption_and_task_projection() {
-    std::cout << "Running test_cpu_burst_consumption_and_task_projection...\n";
+static int test_cpu_burst_consumption() {
+    std::cout << "Running test_cpu_burst_consumption...\n";
 
     auto p = SimulatedProcess::create("burst_worker", 12, ProcessImportance::Service, 1024, 100, 5).value();
 
@@ -416,29 +414,11 @@ static int test_cpu_burst_consumption_and_task_projection() {
     KERNOX_ASSERT_EQ(p.cpu_time_executed(), 30u);
     KERNOX_ASSERT_EQ(p.last_active_time_ticks(), 20u);
 
-    // Project to task
-    sim::ProcessTask task = p.to_task();
-    KERNOX_ASSERT_EQ(task.pid, p.pid());
-    KERNOX_ASSERT_EQ(task.arrival_time, 5u);
-    KERNOX_ASSERT_EQ(task.burst_time, 70u);
-    KERNOX_ASSERT_EQ(task.priority, 12u);
-
     // Consume remaining ticks with overshoot (100 ticks requested, only 70 remain)
     KERNOX_ASSERT_TRUE(p.consume_cpu_time(100, 40).is_ok());
     KERNOX_ASSERT_EQ(p.cpu_burst_remaining(), 0u);
     KERNOX_ASSERT_EQ(p.cpu_time_executed(), 100u);
     KERNOX_ASSERT_EQ(p.last_active_time_ticks(), 40u);
-
-    // Projection reflects completed burst
-    sim::ProcessTask finished_task = p.to_task();
-    KERNOX_ASSERT_EQ(finished_task.burst_time, 0u);
-
-    // Full compatibility check: feed projected task to CpuScheduler
-    std::vector<sim::ProcessTask> tasks{task};
-    auto sched_res = sim::CpuScheduler::run_fcfs(tasks);
-    KERNOX_ASSERT_TRUE(sched_res.is_ok());
-    KERNOX_ASSERT_EQ(sched_res.value().process_metrics.size(), 1u);
-    KERNOX_ASSERT_EQ(sched_res.value().process_metrics[0].burst_time, 70u);
 
     return 0;
 }
@@ -524,7 +504,7 @@ int main() {
     if (test_termination_and_under_pressure_flag() != 0) return 1;
     if (test_memory_accounting_and_invariants() != 0) return 1;
     if (test_cpu_priority_and_importance_orthogonality() != 0) return 1;
-    if (test_cpu_burst_consumption_and_task_projection() != 0) return 1;
+    if (test_cpu_burst_consumption() != 0) return 1;
     if (test_string_conversions_and_formatting() != 0) return 1;
     if (test_pid_type_safety_audit_and_strong_type_proof() != 0) return 1;
 

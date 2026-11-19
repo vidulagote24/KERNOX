@@ -36,11 +36,6 @@ __pycache__/
 .venv/
 
 # KERNOX generated test artifacts (keep curated demo outputs)
- /artifacts/analytics/test_*/
- /artifacts/experiments/test_*.json
- /artifacts/experiments/tmp_*.json
-
-# KERNOX generated test artifacts (keep curated demo outputs)
 /artifacts/analytics/test_*/
 /artifacts/experiments/test_*.json
 /artifacts/experiments/tmp_*.json

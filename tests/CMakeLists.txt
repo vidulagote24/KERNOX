@@ -17,34 +17,35 @@ macro(kernox_add_test test_name source_file)
         kernox_reclaim
         kernox_intel
         kernox_system
-        kernox_sim
         kernox_core
         kernox_compiler_flags
     )
     add_test(NAME ${test_name} COMMAND ${test_name})
 endmacro()
 
+# Core Foundations
 kernox_add_test(test_result test_result.cpp)
 kernox_add_test(test_timer test_timer.cpp)
 kernox_add_test(test_unique_fd test_unique_fd.cpp)
 kernox_add_test(test_child_process test_child_process.cpp)
-kernox_add_test(test_cli test_cli.cpp)
-kernox_add_test(test_cpu_sched test_cpu_sched.cpp)
-kernox_add_test(test_disk_sched test_disk_sched.cpp)
-kernox_add_test(test_deadlock test_deadlock.cpp)
-kernox_add_test(test_memory test_memory.cpp)
+
+# System Telemetry & Status
 kernox_add_test(test_telemetry test_telemetry.cpp)
-kernox_add_test(test_process_manager test_process_manager.cpp)
-kernox_add_test(test_ipc test_ipc.cpp)
-kernox_add_test(test_shm test_shm.cpp)
-kernox_add_test(test_sync test_sync.cpp)
-kernox_add_test(test_unix_socket test_unix_socket.cpp)
-kernox_add_test(test_message_queue test_message_queue.cpp)
+
+# Android Process Intelligence
 kernox_add_test(test_process_intel test_process_intel.cpp)
+
+# Memory Reclamation Policies & Engine
 kernox_add_test(test_reclamation test_reclamation.cpp)
+
+# Experiment & Benchmark Comparisons
 kernox_add_test(test_experiment test_experiment.cpp)
+
+# Android ADB Observation & Parsing
 kernox_add_test(test_adb_parser test_adb_parser.cpp)
+
+# Interactive Android Simulator & Analytics Bridge
 kernox_add_test(test_interactive_simulator test_interactive_simulator.cpp)
 
-add_executable(env_test_helper env_test_helper.cpp)
-target_link_libraries(env_test_helper PRIVATE kernox_compiler_flags)
+# CLI Command Dispatcher
+kernox_add_test(test_cli test_cli.cpp)

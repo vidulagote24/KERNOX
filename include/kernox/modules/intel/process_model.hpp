@@ -1,7 +1,6 @@
 #pragma once
 
 #include "kernox/core/result.hpp"
-#include "kernox/modules/sim/cpu_sched.hpp"
 
 #include <atomic>
 #include <cstdint>
@@ -125,10 +124,6 @@ public:
     // Mutates CPU scheduling priority with [0, 99] bounds validation.
     core::Result<void> set_cpu_priority(uint32_t new_priority);
 
-    // --- Interoperability Adapters ---
-
-    // Projects this simulated process into a kernox::sim::ProcessTask for CPU scheduling.
-    [[nodiscard]] sim::ProcessTask to_task() const noexcept;
 
     // --- Query Accessors ---
 

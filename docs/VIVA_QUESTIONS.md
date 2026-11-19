@@ -1,257 +1,280 @@
-# KERNOX — Technical Viva Questions and Answers
+# KERNOX 2.0 — Viva Examination Questions & Comprehensive Technical Answers
 
-**Project:** KERNOX — A Comprehensive Operating Systems Simulation and Linux Systems Programming Platform
-**Target Audience:** Operating Systems Faculty, Viva Examiners, and Senior Systems Evaluators
-**Scope:** 45 Exhaustive Technical Questions & Answers Grounded in the Real KERNOX C++20 Implementation
-
----
-
-## Category 1: Operating System & Architectural Fundamentals
-
-### Q1: What is the architectural philosophy of "Zero-Falsehood Duality" in KERNOX?
-**Answer:** It is the strict design principle separating theoretical user-space simulations from genuine Linux kernel system calls. In KERNOX, algorithmic models (CPU, disk, memory, deadlock) run pure discrete-event state machines deterministically without suspending real host threads, while systems modules (`ProcessManager`, `SharedMemory`, `UnixSocket`, `PosixMessageQueue`) invoke real Linux kernel system calls (`fork`, `execve`, `mmap`, `futex`, `AF_UNIX`, `mq_*`) on the host operating system.
-
-### Q2: Why did KERNOX choose modern C++20 instead of traditional C for systems programming?
-**Answer:** C++20 provides zero-overhead abstractions that prevent common systems programming bugs:
-1. **Move Semantics & RAII:** Guarantees deterministic cleanup of file descriptors, sockets, processes, and memory mappings without manual `close()` or `free()`.
-2. **Monadic Error Handling:** `core::Result<T, Error>` enforces explicit error checking at compile time without the runtime overhead or stack-unwinding hazards of C++ exceptions across `fork()` boundaries.
-3. **Concepts & Strong Typing:** Enforces type safety across identifiers (e.g. distinguishing PIDs, UIDs, and file descriptors).
-4. **Monotonic Clocks:** `std::chrono::steady_clock` ensures high-precision benchmarking impervious to wall-clock NTP adjustments.
-
-### Q3: Why does KERNOX strictly avoid throwing C++ exceptions across `fork()` boundaries?
-**Answer:** Throwing an exception in a child process after `fork()` can unwind the stack, invoking destructors for objects created in the parent process (including file descriptors, temporary files, or shared memory mappings). This can lead to duplicate cleanup, closing parent resources, or corrupting heap state. KERNOX uses `core::Result<T, Error>` for all systems calls, returning error codes safely.
+**Project:** KERNOX 2.0: Android & Linux Resource Intelligence Platform
+**Target Audience:** Viva Voce Panels, Academic Evaluators, Systems Engineers, and Students
+**Implementation Baseline:** Modern ISO C++20 (`kernox_core`, `kernox_sim`, `kernox_system`, `kernox_intel`, `kernox_reclaim`, `kernox_experiment`, `kernox_adb`) & Python 3.11+ (`tools/analytics`)
 
 ---
 
-## Category 2: CPU Scheduling
+## Category 1: Operating Systems Fundamentals
 
-### Q4: How does KERNOX compute context switch overhead in the SRTF simulation?
-**Answer:** In `CpuScheduler::run_srtf`, a context switch is counted whenever the currently executing process ID differs from the previously executing process ID, provided the previous execution was not an idle CPU tick. If the CPU was idle, starting a new process is an arrival, not a preemptive context switch.
+### Q1: What is the primary architectural duality in KERNOX 2.0?
+**Answer:** KERNOX 2.0 explicitly demarcates two operating domains:
+1. **Pure User-Space Simulation Domain:** Deterministic discrete-event simulation of classical OS algorithms (CPU scheduling, disk scheduling, deadlock detection, paging) and an Android-inspired process memory reclamation laboratory.
+2. **Production-Grade Linux Systems Programming Domain:** Real POSIX systems execution, resource limits (`setrlimit`), live Linux `/proc` telemetry, inter-process communication, and read-only mobile observation via the Android Debug Bridge (ADB).
+Simulated entities (e.g. `SimulatedPid`) never interact with native Linux or Android system calls, guaranteeing zero unintended side-effects.
 
-### Q5: What is the primary advantage of Multilevel Feedback Queue (MLFQ) over Round Robin, and how does KERNOX implement aging?
-**Answer:** Round Robin penalizes I/O-bound interactive processes by giving all processes the same time slice regardless of behavior. MLFQ uses multiple priority queues ($Q_0, Q_1, Q_2$); CPU-bound processes consume their time quantum and are demoted to lower queues with longer quanta, while I/O-bound jobs remain in high-priority queues. KERNOX implements priority aging via a configurable `--boost <ticks>` interval, which periodically flushes all tasks from lower queues back to $Q_0$, completely preventing starvation.
+### Q2: What is the fundamental difference between micro-level page replacement and macro-level process reclamation?
+**Answer:** Micro-level page replacement operates at the virtual memory granularity of individual 4 KiB physical memory frames. When a page fault occurs and physical frames are exhausted, the kernel selects a specific page (via FIFO, LRU, or Optimal) to evict to disk swap.
+Macro-level process reclamation operates at the whole-process granularity. When systemic physical memory pressure exceeds sustainable thresholds (e.g., 75% moderate, 90% critical) and swapping is either unavailable or undesirable (such as on mobile flash memory), the system selects an entire process container to terminate, immediately reclaiming its entire resident memory footprint.
 
-### Q6: What is the exact mathematical relationship between Waiting Time (WT), Turnaround Time (TAT), and Burst Time (BT)?
+### Q3: Why is heavy swapping to disk unsuitable for mobile operating systems like Android?
+**Answer:** Mobile devices rely on NAND flash storage rather than rotating platters or replaceable enterprise SSDs. Swapping causes:
+1. **Write Amplification & Flash Wear:** Flash memory has limited write-erase endurance cycles; continuous swapping rapidly degrades hardware longevity.
+2. **Interactive Latency Spikes (Jank):** Flash access latency during synchronous page-ins blocks the main UI rendering thread, causing visible frame drops.
+3. **Power & Thermal Budget:** High I/O bandwidth rapidly drains mobile batteries and induces thermal throttling.
+Consequently, mobile operating systems discard cached processes rather than maintaining traditional swap partitions.
+
+### Q4: What is the difference between a monolithic kernel and a microkernel, and where does KERNOX fit?
+**Answer:** In a monolithic kernel (e.g., standard Linux), all core OS services (scheduling, memory management, VFS, device drivers, IPC) execute in a single shared address space in kernel privilege mode (Ring 0). In a microkernel (e.g., seL4, QNX), only minimal primitives (thread management, low-level address space mapping, IPC) remain in Ring 0, while device drivers and file systems execute as user-space servers (Ring 3).
+KERNOX is an educational systems laboratory and user-space simulator running entirely in Linux user-space (Ring 3), leveraging Linux system calls for its systems programming modules while running algorithmic simulations in user memory.
+
+---
+
+## Category 2: Process Management & Lifecycle
+
+### Q5: How does `kernox_intel` model process importance, and why is this classification critical?
+**Answer:** `kernox_intel` defines a strongly typed enum `ProcessImportance` reflecting the Android application lifecycle:
+- `Foreground`: Active window receiving user touch input.
+- `Visible`: Visible on screen but paused or non-focused.
+- `Service`: Background execution carrying out user-perceptible work (e.g., music streaming, file download).
+- `Background`: Dormant background task not perceptible to the user.
+- `Cached`: Empty process container retained in memory solely to speed up relaunch.
+This hierarchy is critical because memory reclamation must protect user-facing processes (`Foreground` and `Visible`) while preferentially harvesting `Cached` and `Background` tasks under pressure.
+
+### Q6: How does KERNOX handle process identifier separation, and what is its type-safety status?
+**Answer:** KERNOX defines distinct type aliases:
+- `using SimulatedPid = uint32_t;` in `kernox::intel` (initialized starting at 1000).
+- `using AndroidPid = uint32_t;` in `kernox::adb` (representing parsed remote PIDs).
+- `pid_t` (standard POSIX signed integer for native Linux processes).
+*Source-Level Finding:* Because `SimulatedPid` and `AndroidPid` are type aliases (`using = uint32_t`), they do not provide compile-time type separation. Safety is currently maintained through strict architectural decoupling (the simulation engine never includes or links process termination system calls, and `kernox_adb` provides zero execution APIs). To achieve compile-time type safety preventing accidental cross-domain assignment, strong wrapper structs (e.g. `struct SimulatedPid { uint32_t value; ... };`) are recommended.
+
+### Q7: Describe the formal state machine and transitions of a `SimulatedProcess`.
+**Answer:** The actual implementation in `kernox::intel::ProcessLifecycleState` defines six distinct states:
+1. `Created`: The initial state upon `SimulatedProcess::create()`.
+2. `Ready`: Admitted to the runqueue (`mark_ready()`, `preempt_to_ready()`, or `unblock_to_ready()`).
+3. `Running`: Actively executing on simulated CPU (`dispatch_running()`).
+4. `Blocked`: Waiting for simulated I/O or resources (`block()`).
+5. `Completed`: Terminal state reached when `cpu_burst_remaining_ == 0` (`complete()`).
+6. `Terminated`: Terminal state reached when evicted under memory pressure or aborted (`terminate()`).
+*Key Distinction:* Distinguishing `Completed` from `Terminated` is essential for survivor accounting: processes that complete their execution are survivors, whereas terminated processes fell victim to memory pressure.
+
+### Q8: What metrics constitute the memory footprint of a `SimulatedProcess`?
+**Answer:** The `MemoryFootprint` structure tracks:
+- `allocated_bytes`: Total logical memory requested by the process.
+- `resident_bytes`: Physical memory currently backed by simulated frames (analogous to RSS).
+- `peak_allocated_bytes`: Maximum memory watermark reached during process lifetime.
+- `last_active_tick`: Simulation timestamp of the last CPU dispatch or memory access, used for LRU eviction calculation.
+
+---
+
+## Category 3: CPU Scheduling Algorithms
+
+### Q9: What CPU scheduling algorithms are implemented in `kernox_sim`, and how are they classified?
 **Answer:**
-$$\text{Turnaround Time} = \text{Completion Time} - \text{Arrival Time}$$
-$$\text{Waiting Time} = \text{Turnaround Time} - \text{Burst Time}$$
-In preemptive algorithms (SRTF, RR), Waiting Time represents the sum of all time intervals the process spent in the ready queue waiting for the CPU.
+1. **Non-Preemptive:**
+   - **First-Come, First-Served (FCFS):** Dispatches in strict arrival order; susceptible to the convoy effect.
+   - **Shortest Job First (SJF):** Dispatches the process with the shortest CPU burst; provably optimal for minimizing average waiting time among non-preemptive algorithms.
+   - **Non-Preemptive Priority:** Dispatches highest priority; susceptible to starvation.
+2. **Preemptive:**
+   - **Shortest Remaining Time First (SRTF):** Preempts running process if a new arrival has a shorter remaining burst.
+   - **Round Robin (RR):** Allocates a fixed time quantum ($q$); ensures bounded response times.
+   - **Multilevel Feedback Queue (MLFQ):** Multiple priority queues with dynamic feedback and priority boosting to prevent starvation.
 
----
+### Q10: How does KERNOX's MLFQ prevent indefinite starvation of CPU-bound processes?
+**Answer:** The MLFQ simulator employs two rules:
+1. **Rule of Demotion:** If a process consumes its entire time quantum without yielding for I/O, its priority is reduced by one level (moved to a lower queue with a larger time quantum).
+2. **Priority Boost:** After a configurable time interval (`boost_interval`), all processes across all queues are reset to the highest priority queue. This prevents starvation of low-priority CPU-bound processes when interactive high-priority processes arrive frequently.
 
-## Category 3: Disk Scheduling
+### Q11: What is the convoy effect, and which algorithm eliminates it?
+**Answer:** The convoy effect occurs in FCFS scheduling when a long CPU-bound process occupies the CPU, causing multiple short, I/O-bound processes to queue up behind it, leading to low CPU and device utilization. Preemptive algorithms such as Round Robin (RR) and Shortest Remaining Time First (SRTF) eliminate the convoy effect by preempting long jobs in favor of shorter or interactive tasks.
 
-### Q7: Why does SCAN (Elevator Algorithm) yield higher Total Head Movement than SSTF on the Silberschatz canonical workload, and why is SCAN still preferred in practice?
-**Answer:** On the canonical workload (`98, 183, 37, 122, 14, 124, 65, 67` starting at 53), SSTF yields 236 cylinders while SCAN yields 208 (or 236 depending on boundary sweep). However, SSTF selects the nearest request greedily, which causes starvation for distant requests if a cluster of requests keeps arriving near the head. SCAN guarantees an upper bound on waiting time by sweeping continuously from one platter edge to the other.
-
-### Q8: What is the critical mechanical difference between C-SCAN and C-LOOK?
+### Q12: How are Average Turnaround Time and Average Waiting Time calculated?
 **Answer:**
-- **C-SCAN (Circular SCAN):** Travels all the way to the absolute end cylinder of the disk (e.g. cylinder 199), then immediately jumps to cylinder 0 without servicing requests on the return trip.
-- **C-LOOK:** Only travels as far as the highest requested cylinder in the current direction, then jumps directly to the lowest requested cylinder without traveling all the way to cylinders 199 or 0, saving unnecessary seek travel.
+- $\text{Turnaround Time} = \text{Completion Time} - \text{Arrival Time}$
+- $\text{Waiting Time} = \text{Turnaround Time} - \text{Total CPU Burst Time}$
+- $\text{Response Time} = \text{Time of First CPU Dispatch} - \text{Arrival Time}$
+Average metrics are computed by dividing the sum of each metric across all processes by the total process count $N$.
 
 ---
 
-## Category 4: Deadlock Management
+## Category 4: Memory Management & Allocation
 
-### Q9: In Dijkstra's Banker's Algorithm, what is the significance of the $\text{Need}$ matrix, and how is it derived?
+### Q13: Explain the dynamic contiguous memory allocation algorithms evaluated in `kernox_sim`.
 **Answer:**
-$$\text{Need}[i][j] = \text{Max}[i][j] - \text{Allocation}[i][j]$$
-The $\text{Need}$ matrix represents the remaining resource units process $i$ may request before completing. If $\text{Need}[i][j] > \text{Work}[j]$ for all active processes, the system cannot guarantee that any process can finish, indicating an unsafe state.
+- **First-Fit:** Scans the free block list from the beginning and allocates the first hole large enough. Fast, but tends to accumulate small fragments at the beginning of the list.
+- **Best-Fit:** Scans the entire free list to find the hole closest in size to the requested block. Minimizes wasted space per allocation, but produces very small, unusable external fragments.
+- **Worst-Fit:** Scans the entire free list to find the largest available hole. Leaves larger remaining fragments, but is slow and generally yields poor memory utilization.
+- **Next-Fit:** Begins scanning from the location of the previous allocation. Distributes allocations more evenly, avoiding fragmentation clustering at the start of memory.
 
-### Q10: How does KERNOX implement transaction-safe resource requests in `deadlock request`?
-**Answer:** KERNOX performs speculative allocation:
-1. It verifies that $\text{Request} \le \text{Need}$ and $\text{Request} \le \text{Available}$.
-2. It speculatively modifies the state vectors:
-   $$\text{Available} \leftarrow \text{Available} - \text{Request}$$
-   $$\text{Allocation} \leftarrow \text{Allocation} + \text{Request}$$
-   $$\text{Need} \leftarrow \text{Need} - \text{Request}$$
-3. It executes the Banker's safety evaluation. If the resulting state is safe, the transaction is committed; if unsafe, KERNOX rolls back all three vectors to their original values and returns `ErrorCode::InvalidState`.
-
-### Q11: In a Resource Allocation Graph (RAG), does the presence of a cycle always imply a deadlock?
-**Answer:** No. A cycle is a necessary and sufficient condition for deadlock **only if** every resource class has exactly one single instance. If resources contain multiple instances, a cycle is a necessary condition but not sufficient, because processes outside the cycle may release instances that break the deadlock. KERNOX uses Tarjan's DFS for single-instance RAG cycles and a dedicated multi-instance vector detection algorithm for multi-instance configurations.
-
----
-
-## Category 5: Memory Management & Virtual Memory
-
-### Q12: How does Next Fit differ from First Fit, and what state must the allocator maintain?
-**Answer:** First Fit always scans the free block list from the beginning (index 0) and allocates the first block large enough. Next Fit begins scanning from the location of the previous allocation (using a persistent cursor). It spreads allocations across memory, reducing fragmentation at the start of the list, but requires maintaining a stateful cursor that wraps around modulo the block count.
-
-### Q13: In KERNOX's MMU paging simulation, how does it distinguish a Page Fault from a Segmentation Fault?
+### Q14: Distinguish between internal fragmentation and external fragmentation.
 **Answer:**
-1. **Segmentation Fault:** Occurs when the requested logical address exceeds the process's allocated address space ($\text{Logical Address} \ge \text{Virtual Limit}$). The address is fundamentally invalid.
-2. **Page Fault:** Occurs when the logical address is within the valid virtual limit, but the page table entry indicates the page is currently not present in physical RAM ($\text{ValidBit} == 0$). The operating system must service a page-in trap from backing store.
+- **Internal Fragmentation:** Occurs when allocated memory is larger than requested memory (e.g., when a process requesting 3500 bytes is given a fixed 4096-byte page frame). The unused 596 bytes inside the partition are wasted.
+- **External Fragmentation:** Occurs when total free memory is sufficient to satisfy a request, but the free memory is divided into small, non-contiguous holes such that no single contiguous block is large enough.
 
-### Q14: What is Bélady's Anomaly, and which page replacement algorithms are immune to it?
-**Answer:** Bélady's Anomaly is the counter-intuitive phenomenon where increasing the number of physical page frames results in an increase in the number of page faults. It occurs in FIFO replacement. Stack-based algorithms (such as LRU and Optimal) are mathematically immune because the set of pages in an $N$-frame memory is always a strict subset of the pages in an $(N+1)$-frame memory.
-
-### Q15: What is Peter Denning's Working-Set model, and how does KERNOX compute $W(t, \Delta)$?
-**Answer:** The Working-Set model defines the set of pages referenced by a process in the most recent time window $\Delta$:
-$$W(t, \Delta) = \{ p \in \text{Pages} \mid p \text{ was referenced in } [t - \Delta + 1, t] \}$$
-KERNOX slides a window of size $\Delta$ across the reference trace and computes the set cardinality $|W(t, \Delta)|$, measuring process memory locality and predicting thrashing.
+### Q15: How does two-level paging work in `kernox_sim`, and what problem does it solve?
+**Answer:** In a 32-bit linear address space with 4 KiB pages, a single flat page table requires $2^{20}$ page table entries (PTEs) $\approx 4\text{ MiB}$ of contiguous physical memory per process, even if the process only uses a small fraction of its address space.
+Two-level paging breaks the 32-bit address into:
+- 10 bits: Page Directory Index (references the Page Directory).
+- 10 bits: Page Table Index (references a Page Table).
+- 12 bits: Page Offset ($4\text{ KiB}$ page size).
+This allows page tables to be allocated dynamically on-demand; unused regions of the virtual address space do not require allocated physical page tables, saving significant physical RAM.
 
 ---
 
-## Category 6: Linux Process Management & Sandboxing
+## Category 5: Virtual Memory & Page Replacement
 
-### Q16: How does KERNOX pass error information from the child process back to the parent across `execve()`?
-**Answer:** Before calling `fork()`, KERNOX creates an anonymous pipe with the `pipe2(O_CLOEXEC)` flag. If `execve()` succeeds, the pipe descriptor in the child is automatically closed by the kernel without sending data. If `execve()` fails, the child writes the `errno` integer into the pipe and calls `::_exit(127)`. The parent reads the pipe: if read returns 0 (EOF), `execve` succeeded; if it reads 4 bytes, it extracts the exact `errno` code.
+### Q16: What is Bélady's Anomaly, and which algorithms are susceptible to it?
+**Answer:** Bélady's Anomaly is the counterintuitive phenomenon where increasing the number of physical page frames results in an *increase* in the number of page faults for a given memory reference string.
+- **Susceptible:** FIFO (First-In, First-Out) page replacement is susceptible because its eviction queue is based on arrival time rather than access history.
+- **Immune:** Stack algorithms—such as LRU (Least Recently Used) and Optimal (Bélady's MIN)—are mathematically immune to Bélady's Anomaly because the set of pages in an $n$-frame allocation is always a strict subset of the pages in an $(n+1)$-frame allocation.
 
-### Q17: What is the signal escalation policy used in `ProcessManager::run`?
-**Answer:** When a process exceeds its wall-clock execution timeout:
-1. The supervisor sends `SIGTERM` to allow graceful termination and resource cleanup.
-2. It enters a configurable grace period (default: 200ms), periodically checking `waitpid(pid, &status, WNOHANG)`.
-3. If the process does not terminate within the grace period, the supervisor escalates to `SIGKILL`, which cannot be caught or ignored by the process.
+### Q17: How does Bélady's Optimal (MIN) algorithm function, and why cannot it be implemented in a real operating system?
+**Answer:** Bélady's Optimal algorithm replaces the page that will not be referenced for the longest period of time in the future. It is provably optimal, producing the absolute lowest page fault rate for any reference string.
+It cannot be implemented in a general-purpose operating system because it requires perfect, clairvoyant knowledge of future memory access strings, which is impossible to predict in non-deterministic multi-threaded environments. It serves strictly as a theoretical benchmark against which other algorithms are measured.
 
-### Q18: Which POSIX resource limits does KERNOX enforce using `setrlimit(2)`?
+### Q18: What is Peter Denning's Working-Set model, and how does KERNOX simulate it?
+**Answer:** Peter Denning's Working-Set model is based on the principle of locality of reference. The working set $W(t, \Delta)$ of a process at time $t$ is the set of distinct pages referenced during the most recent time window $\Delta$.
+KERNOX simulates this by maintaining a sliding reference window of size $\Delta$ over the reference stream. If the total working set demand across all active processes exceeds available physical frames, the system enters *thrashing*; KERNOX tracks working set size over time to demonstrate thrashing prevention.
+
+---
+
+## Category 6: Memory Pressure & Reclamation Engine
+
+### Q19: What are the memory pressure thresholds defined in KERNOX 2.0 Phase C?
+**Answer:** `kernox::reclaim::PressureDetector` defines two authoritative thresholds:
+- **Moderate Pressure Threshold:** **75%** utilization ($\text{moderate\_threshold\_ratio} = 0.75$).
+- **Critical Pressure Threshold:** **90%** utilization ($\text{critical\_threshold\_ratio} = 0.90$).
+These thresholds trigger proactive and emergency whole-process reclamation passes, respectively.
+
+### Q20: Explain the four reclamation policies evaluated in KERNOX 2.0.
 **Answer:**
-- `RLIMIT_CPU`: Maximum CPU execution time in seconds (sends `SIGXCPU`).
-- `RLIMIT_AS`: Maximum virtual address space in bytes (causes memory allocations like `malloc` or `mmap` to fail with `ENOMEM`).
-- `RLIMIT_NOFILE`: Maximum number of open file descriptors.
-- `RLIMIT_FSIZE`: Maximum file size in bytes that the process may create (sends `SIGXFSZ`).
+1. **FIFO:** Evicts victim processes strictly in order of creation time (`created_at`).
+2. **LRU:** Evicts victim processes that have been idle the longest based on `last_active_at`.
+3. **Priority:** Evicts processes with the lowest integer scheduling priority.
+4. **ImportanceAware:** Evaluates processes according to Android-inspired importance tiers, evicting `Cached` first, followed by `Background`, then `Service`, then `Visible`. **Foreground processes are strictly shielded from eviction.**
 
-### Q19: How does `wait4(2)` differ from standard `waitpid(2)`?
-**Answer:** `wait4` accepts a pointer to `struct rusage`. Upon reaping the child process, the kernel populates this structure with high-resolution resource accounting metrics, including user CPU time (`ru_utime`), system CPU time (`ru_stime`), maximum resident set size (`ru_maxrss`), voluntary context switches (`ru_nvcsw`), and nonvoluntary context switches (`ru_nivcsw`).
+### Q21: What is priority inversion in whole-process memory reclamation, and how does `ImportanceAware` prevent it?
+**Answer:** In memory reclamation, priority inversion occurs when a naive policy (like FIFO or LRU) kills an important, user-visible task (e.g., an active UI foreground app) simply because it was started early (FIFO) or was briefly idle while waiting for network input (LRU), while simultaneously preserving unimportant background tasks.
+`ImportanceAware` prevents this by partitioning processes into explicit importance tiers and enforcing an invariant: lower tiers must be completely exhausted before higher tiers are evaluated. Furthermore, `Foreground` processes are shielded by an explicit protection guarantee under moderate and critical pressure.
+
+### Q22: What constitutes a "survivor" in KERNOX experiment accounting?
+**Answer:** In accordance with `ExperimentRunner::calculate_metrics()`, a process is counted as a survivor (`processes_survived`) if it was not terminated by memory pressure during the experiment. This includes:
+1. Processes that completed their entire CPU burst normally (`processes_completed`).
+2. Processes that remained active in memory at the conclusion of the simulation.
+Completed processes are never counted as reclamation victims. The overall survival rate is:
+$$\text{Survival Rate} = \frac{\text{processes\_survived}}{\text{total\_processes}}$$
+
+### Q23: How does the `ReclamationEngine` avoid infinite loops when memory cannot be freed?
+**Answer:** The `ReclamationEngine` bounds every reclamation round by the count of active processes. If an eviction pass scans all processes without finding any eligible victim (or if all remaining processes are protected foreground tasks), the engine terminates the loop immediately and returns `ReclamationStatus::NoEligibleVictims`. This prevents infinite execution loops when memory targets cannot be met.
 
 ---
 
-## Category 7: System Telemetry & Procfs Parsing
+## Category 7: Linux Systems Programming & POSIX IPC
 
-### Q20: How does KERNOX calculate CPU utilization from `/proc/stat`?
-**Answer:** It parses the first `cpu` line into tick counters: `user`, `nice`, `system`, `idle`, `iowait`, `irq`, `softirq`, `steal`.
-$$\text{Total Ticks} = \text{user} + \text{nice} + \text{system} + \text{idle} + \text{iowait} + \text{irq} + \text{softirq} + \text{steal}$$
-$$\text{Active Ticks} = \text{Total Ticks} - (\text{idle} + \text{iowait})$$
-It samples these counters at $t_1$, sleeps for $\Delta t = 100\text{ms}$, samples at $t_2$, and computes:
-$$\text{Utilization \%} = \frac{\Delta \text{Active}}{\Delta \text{Total}} \times 100\%$$
+### Q24: How does `ChildProcess` implement safe, sandboxed process execution?
+**Answer:** `ChildProcess` manages process creation using `fork()` and `execve()`. To prevent deadlocks and race conditions:
+1. It creates an internal synchronization pipe before forking with `FD_CLOEXEC` enabled.
+2. In the child process, file descriptor redirection is applied, POSIX resource limits (`setrlimit`) are configured, and `execve()` is invoked.
+3. If `execve()` fails, the child writes the resulting `errno` to the synchronization pipe and immediately calls `_exit(1)`.
+4. In the parent process, if the pipe receives an error, it reaps the failed child and returns a typed `Result<T, Error>` to the caller.
+5. Lifetime is governed by RAII: if the parent process drops the `ChildProcess` handle, the child is reaped.
 
-### Q21: What information is extracted from `/proc/<pid>/status` and `/proc/<pid>/io`?
+### Q25: What is graceful signal escalation in `ProcessManager`?
+**Answer:** When supervising a target process with an execution timeout, `ProcessManager` avoids immediately sending an uncatchable `SIGKILL`. Instead:
+1. When timeout occurs, it first delivers `SIGTERM` to allow the process to flush buffers, release file locks, and exit cleanly.
+2. It waits for a configurable grace period (default: 200 ms) using non-blocking `waitpid(WNOHANG)`.
+3. If the process has not terminated after the grace period, `ProcessManager` escalates to `SIGKILL` to force termination.
+
+### Q26: What is `PTHREAD_MUTEX_ROBUST`, and how does KERNOX use it in shared memory?
+**Answer:** When multiple processes share a mutex in POSIX shared memory (`/dev/shm`), if a process crashes or is killed by `SIGKILL` while holding the mutex, a standard mutex remains locked indefinitely, causing all other processes to deadlock.
+`PTHREAD_MUTEX_ROBUST` solves this: when a process dies holding the mutex, the next process attempting `pthread_mutex_lock()` receives `EOWNERDEAD`. KERNOX catches this error, verifies and recovers shared state consistency, calls `pthread_mutex_consistent()`, and unlocks the mutex, guaranteeing cross-process crash resilience.
+
+### Q27: How does KERNOX pass file descriptors between processes using UNIX domain sockets?
+**Answer:** Using UNIX domain stream sockets (`AF_UNIX`) and ancillary control data via `sendmsg()` and `recvmsg()`. The file descriptor integer from the sending process is packed into a `struct cmsghdr` message with `cmsg_level = SOL_SOCKET` and `cmsg_type = SCM_RIGHTS`.
+When the Linux kernel delivers the message to the receiving process, it allocates a new file descriptor entry in the receiver's file descriptor table pointing to the exact same underlying `struct file` in the kernel VFS.
+
+### Q28: How do POSIX Message Queues (`mq_*`) differ from anonymous pipes?
 **Answer:**
-- `/proc/<pid>/status`: Process state (`R`, `S`, `Z`), parent PID, thread count, 4-tuple security credentials (real, effective, saved, and filesystem UIDs/GIDs), virtual memory footprint (`VmSize`, `VmRSS`), and context switch counts.
-- `/proc/<pid>/io`: Characters read/written (`rchar`, `wchar`), read/write syscall counts (`syscr`, `syscw`), and physical storage byte transfers (`read_bytes`, `write_bytes`).
-
-### Q22: Why does reading `/proc/1/io` fail with `PermissionDenied` when run as an unprivileged user?
-**Answer:** Linux protects process I/O accounting via `PTRACE_MODE_READ_FSCREDS`. To read `/proc/<pid>/io`, the calling process must have `CAP_SYS_PTRACE` or share the same real/effective UID as the target process. PID 1 is owned by `root`; hence, an unprivileged user receives `EACCES`. KERNOX catches this and gracefully returns `ErrorCode::PermissionDenied`.
+1. **Message Boundaries:** Pipes are unstructured byte streams requiring application-level framing; message queues preserve discrete message boundaries.
+2. **Priority Preemption:** Messages sent via `mq_send()` carry a priority integer (0 to 32,767). High-priority messages are placed at the head of the queue, preempting lower-priority messages. Equal-priority messages are preserved in strict FIFO order.
+3. **Named Kernel Persistence:** Pipes exist only while open file descriptors exist; POSIX message queues have filesystem-like names (`/name`) and persist in the kernel until explicitly unlinked via `mq_unlink()`.
 
 ---
 
-## Category 8: Inter-Process Communication (IPC)
+## Category 8: Android Process & Memory Observations
 
-### Q23: What is the POSIX `PIPE_BUF` guarantee, and how does KERNOX test it?
-**Answer:** Under POSIX, writes to a pipe or FIFO of up to `PIPE_BUF` bytes (defined as 4096 bytes on Linux) are guaranteed to be atomic. If multiple processes write concurrently, their payloads will not be interleaved. In `test_ipc`, KERNOX verifies this invariant by spawning concurrent processes writing blocks $\le 4096$ bytes and confirming that reading processes never receive fragmented or mixed data packets.
+### Q29: What is the purpose of the `kernox_adb` module, and what is its safety boundary?
+**Answer:** `kernox_adb` provides passive, read-only telemetry observation of physical Android devices and Android Virtual Devices (AVDs).
+**Safety Boundary:** To guarantee device safety, KERNOX strictly prohibits any commands that modify device state:
+- No `kill` or `kill -9` commands.
+- No `am force-stop` or application disabling.
+- No package installation or uninstallation (`pm install/uninstall`).
+- No filesystem remounting (`remount`) or root privilege operations.
+All telemetry is collected using passive read-only queries (`getprop`, `/proc/meminfo`, `dumpsys meminfo`, `ps`).
 
-### Q24: How does a named FIFO differ from an anonymous pipe?
+### Q30: What is the mathematical relationship between `MemTotal`, `MemFree`, `Cached`, and `MemAvailable` in `/proc/meminfo`?
+**Answer:** In Linux and Android `/proc/meminfo`:
+$$\text{MemAvailable} \approx \text{MemFree} + \text{Reclaimable Page Cache} + \text{Reclaimable Slab} - \text{Low-Watermark Reservation}$$
+`MemAvailable` is **not** a distinct additive slice of physical RAM. It is an *estimate* of how much memory can be allocated without causing the system to swap or drop below memory watermarks.
+Because `MemAvailable` includes `MemFree` and reclaimable `Cached` memory, adding them together ($MemAvailable + MemFree + Cached$) is mathematically invalid and produces double-counting.
+
+### Q31: What is Proportional Set Size (PSS), and why is it preferred over Resident Set Size (RSS) on Android?
+**Answer:** Resident Set Size (RSS) counts all physical pages mapped into a process's address space, including shared libraries (e.g., `libc.so`, Android framework runtime) and shared memory. If 10 processes each share a 20 MiB framework library, summing their RSS counts that library 10 times (200 MiB), which severely inflates memory totals.
+Proportional Set Size (PSS) divides each shared page's size by the number of processes sharing it. If 10 processes share a page, each process is charged $\frac{1}{10}$th of that page's size. Summing the PSS across all processes yields the exact total physical memory consumed by those processes.
+
+### Q32: What is an Android Virtual Device (AVD), and how is emulator provenance tracked?
+**Answer:** An AVD is an emulated Android device running the Android OS image inside a QEMU virtual machine with hardware acceleration (KVM on Linux/WSL2). KERNOX detects emulators by checking device serial numbers (e.g., `emulator-5554`) and product properties (`sdk_gphone64_x86_64`).
+In `tools/analytics`, provenance metadata records `is_emulator: true` and `target_type: "Android Virtual Device (AVD) / Emulator"` to prevent presenting emulator benchmark data as physical silicon telemetry.
+
+---
+
+## Category 9: C++ Architecture & Software Design
+
+### Q33: How does KERNOX implement monadic error handling without C++ exceptions?
+**Answer:** KERNOX defines `Result<T, Error>` in `include/kernox/core/result.hpp`, implemented as a discriminated union over `std::variant<T, Error>`.
+- Methods return a `Result<T>` containing either the valid output or a typed `Error` with an `ErrorCode` and a human-readable context string.
+- Callers check `res.is_ok()` before calling `res.value()` or handle `res.error()`.
+- This ensures zero exception overhead, deterministic call stacks, and explicit compiler enforcement of error checking across all systems programming boundaries.
+
+### Q34: What is the Rule of Five, and how is it applied in `UniqueFd`?
+**Answer:** The Rule of Five states that if a class defines a destructor, it should explicitly define or delete:
+1. Destructor (`~UniqueFd()`)
+2. Copy Constructor (`UniqueFd(const UniqueFd&) = delete`)
+3. Copy Assignment Operator (`UniqueFd& operator=(const UniqueFd&) = delete`)
+4. Move Constructor (`UniqueFd(UniqueFd&& other) noexcept`)
+5. Move Assignment Operator (`UniqueFd& operator=(UniqueFd&& other) noexcept`)
+`UniqueFd` encapsulates a POSIX file descriptor integer (`int fd_`). To prevent double-close bugs and resource leaks, copy operations are explicitly deleted, making `UniqueFd` move-only. When moved, the source descriptor is reset to `-1`. The destructor automatically invokes `::close(fd_)` if `fd_ >= 0`.
+
+### Q35: What sanitizers are integrated into KERNOX, and what is the difference between memory safety and concurrency verification?
 **Answer:**
-- **Anonymous Pipe:** Exists only in kernel memory and is accessible only to processes that inherit its file descriptors across `fork()`.
-- **Named FIFO:** Created in the filesystem namespace via `mkfifo(path, mode)`. Any unrelated processes with appropriate filesystem permissions can open it by path (`open(path, O_RDONLY)` or `open(path, O_WRONLY)`).
+1. **AddressSanitizer (ASan) & UndefinedBehaviorSanitizer (UBSan):** Configured under preset `dev-asan`. Instruments memory allocations and pointer dereferences to detect heap/stack buffer overflows, use-after-free, double-free, and memory leaks. In KERNOX, all 20 test suites pass cleanly under ASan/UBSan with zero leaks and zero errors. *Crucial Distinction:* ASan/UBSan verifies memory safety, but does *not* prove the absence of data races.
+2. **ThreadSanitizer (TSan):** Configured under preset `dev-tsan`. Designed to detect data races by tracking memory access timestamps. *Environment Limitation:* Under standard WSL2 kernels, TSan aborts at startup with `unexpected memory mapping` due to Linux virtual memory randomization conflicts.
+3. **Concurrency & Synchronization Verification:** Because TSan dynamic analysis is unavailable in WSL2, concurrency is verified through:
+   - `test_sync`: 20 unit tests validating robust mutex crash recovery (`EOWNERDEAD`, `pthread_mutex_consistent`), condition variables, and atomic ring buffer slot states.
+   - `scripts/stress_test.sh`: 5-iteration stress testing across multi-process synchronization suites with zero flakes.
 
-### Q25: Why must a named FIFO open with `O_NONBLOCK` when opening in read-only mode if no writer is yet present?
-**Answer:** Under POSIX, opening a FIFO with `O_RDONLY` blocks until another process opens it for writing (`O_WRONLY`). By specifying `O_NONBLOCK`, `open()` succeeds immediately without waiting for a writer, allowing event-driven asynchronous initialization.
+### Q36: Why are compile flags `-Wall -Wextra -Wpedantic -Wconversion -Werror` enforced in CMake?
+**Answer:** To enforce strict code quality. `-Wall` and `-Wextra` enable extensive compiler diagnostic warnings; `-Wpedantic` enforces strict ISO C++20 standard conformance; `-Wconversion` flags implicit narrowing and sign conversions that could cause integer underflow or data loss; and `-Werror` converts all warnings into fatal compilation errors, preventing warning accumulation.
 
 ---
 
-## Category 9: POSIX Shared Memory
+## Category 10: Experiment Methodology & Analytics
 
-### Q26: What is the exact sequence of system calls required to create and map POSIX shared memory?
+### Q37: Why must multi-policy comparison experiments use identical PRNG seeds?
+**Answer:** To ensure fair, scientific, and reproducible comparative evaluation. By seeding the pseudo-random number generator with the same seed (`seed=42`), every policy is evaluated against an identical workload: the exact same process arrival times, burst requirements, memory footprints, and importance tier distributions. Any observed difference in performance is caused strictly by the algorithmic decisions of the reclamation policy, eliminating experimental confounding.
+
+### Q38: What are the five workload scenarios evaluated in KERNOX 2.0?
 **Answer:**
-1. `shm_open(name, O_CREAT | O_RDWR | O_EXCL, 0660)`: Creates a virtual file in `/dev/shm`.
-2. `ftruncate(fd, size)`: Sets the allocated size of the shared memory object.
-3. `mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)`: Maps the shared memory into the process's virtual address space.
-4. `close(fd)`: Closes the file descriptor (the memory mapping remains active).
-5. `munmap(ptr, size)`: Unmaps the virtual address space on destruction.
-6. `shm_unlink(name)`: Removes the shared memory object from the kernel VFS.
+1. **`Normal`:** Balanced process arrivals and moderate memory allocations; operating memory remains within safe capacity.
+2. **`HighMemoryPressure`:** Aggressive process generation driving memory utilization beyond 90%, forcing emergency multi-round reclamation passes.
+3. **`BackgroundHeavy`:** Large populations of cached and background applications; tests the efficiency of background memory harvesting.
+4. **`ForegroundProtection`:** Critical mix of user-facing UI processes competing against background services; tests whether policies protect active foreground tasks.
+5. **`Mixed`:** Multi-phase fluctuating workload with varied burst durations.
 
-### Q27: How does KERNOX prevent child processes from accidentally unlinking shared memory when they terminate?
-**Answer:** `SharedMemory` tracks ownership using `is_owner_` and `owner_pid_`. The creating process sets `owner_pid_ = ::getpid()`. When a child process is forked or when another process attaches via `SharedMemory::open_existing()`, `is_owner_` is set to `false`. On destruction, only the process matching `owner_pid_` invokes `shm_unlink()`.
+### Q39: Why does wall-clock execution latency not prove asymptotic algorithmic complexity?
+**Answer:** Host wall-clock latency ($\mu s$) measures the actual elapsed time of executing the simulation on specific host hardware under specific OS scheduler conditions. It incorporates host CPU caching, context switching, memory allocator overhead, and background host activity.
+Proving asymptotic complexity $\mathcal{O}(n)$ requires theoretical mathematical analysis of algorithm operations (e.g., number of victim comparisons or queue traversals). Benchmarked wall-clock latency reflects practical runtime overhead, not a formal asymptotic proof.
 
----
-
-## Category 10: Process-Shared Synchronization & Ring Buffer
-
-### Q28: How is a `pthread_mutex_t` configured to operate across different processes in shared memory?
-**Answer:**
-1. The mutex attribute object must be initialized with `pthread_mutexattr_init(&attr)`.
-2. The process-shared attribute must be explicitly set: `pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED)`.
-3. The mutex memory must reside in a memory region mapped with `MAP_SHARED` (such as POSIX shared memory), not heap or private stack memory.
-4. `pthread_mutex_init(&mutex, &attr)` initializes the mutex in that shared memory region.
-
-### Q29: What is `PTHREAD_MUTEX_ROBUST`, and what happens if a process crashes while holding a robust mutex?
-**Answer:** `PTHREAD_MUTEX_ROBUST` is a mutex attribute (`pthread_mutexattr_setrobust(&attr, PTHREAD_MUTEX_ROBUST)`). If a process terminates (or is killed with `SIGKILL`) while holding the mutex, the Linux kernel detects the dead owner via the robust futex list. The next process calling `pthread_mutex_lock` unblocks and receives the return code `EOWNERDEAD`. The acquiring process must verify/restore shared invariants, call `pthread_mutex_consistent(&mutex)`, and continue safely.
-
-### Q30: How does KERNOX's `SharedRingBuffer` achieve zero-heap cross-process communication?
-**Answer:** The entire data structure is laid out in a single contiguous block of shared memory (`/dev/shm`). The memory is segmented into:
-1. `RingBufferHeader`: Magic number, layout version, capacity, slot size, head index, tail index, item count, and embedded `ProcessSharedMutex` and `ProcessSharedConditionVariable` primitives.
-2. Fixed-size `SlotHeader` structures and payload byte arrays.
-No pointers or dynamic `malloc`/`new` allocations exist within the shared region; all slot indexing uses integer offsets relative to the base address.
-
-### Q31: How does `SharedRingBuffer` signal shutdown to blocked producer and consumer processes?
-**Answer:** It provides a `shutdown()` method that acquires the shared mutex, transitions the state to `RingBufferState::ShuttingDown`, and broadcasts on both `not_empty` and `not_full` condition variables (`pthread_cond_broadcast`). Any blocked threads/processes wake up, detect the `ShuttingDown` state, release the lock, and return `ErrorCode::Cancelled` without deadlocking.
-
----
-
-## Category 11: UNIX Domain Sockets & Descriptor Passing
-
-### Q32: How does a UNIX domain socket (`AF_UNIX`) differ from an Internet domain socket (`AF_INET`)?
-**Answer:** `AF_UNIX` operates entirely within the Linux kernel virtual memory subsystem without the network stack:
-- It bypasses network routing, packetization, checksumming, TCP windowing, and congestion control algorithms, achieving significantly lower latency and higher throughput.
-- It uses filesystem paths (e.g. `/tmp/kernox.sock`) for binding instead of IP addresses and port numbers.
-- It enables unique kernel security and resource transfer features: `SO_PEERCRED` and `SCM_RIGHTS`.
-
-### Q33: How does `SO_PEERCRED` work, and why is it impervious to spoofing?
-**Answer:** `getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &ucred, &len)` queries the Linux kernel for the connected peer's credentials (`ucred.pid`, `ucred.uid`, `ucred.gid`). Because the kernel directly assigns these credentials from the task struct of the peer endpoint at connection time, the peer process cannot forge or spoof its identity.
-
-### Q34: How does file descriptor passing work via `SCM_RIGHTS`?
-**Answer:** A file descriptor integer in user space is merely an index into that specific process's file descriptor table. Passing the integer `4` across a pipe does not give another process access to file 4. With `SCM_RIGHTS`, `sendmsg(2)` sends the descriptor as ancillary control data (`struct cmsghdr`). The Linux kernel intercepts the control message, increments the reference count of the underlying open file description (`struct file`), allocates a new, valid file descriptor index in the receiving process's table, and delivers the new integer to `recvmsg(2)`.
-
----
-
-## Category 12: POSIX Message Queues
-
-### Q35: How does priority preemption work in POSIX Message Queues (`PosixMessageQueue`)?
-**Answer:** In `mq_send(mqd, msg, len, priority)`, each message carries an integer priority (from 0 to 32,767). The Linux kernel inserts messages into the queue ordered by priority: higher-priority messages are inserted before lower-priority messages. When a consumer calls `mq_receive()`, it always dequeues the highest-priority message currently in the queue. Messages of identical priority are delivered in strict FIFO order.
-
-### Q36: Why was a synchronization handshake necessary in `kernox ipc mq-demo`?
-**Answer:** If the consumer child reads the queue concurrently while the parent is enqueuing messages, the consumer may dequeue message 1 (Priority 5) before the parent has had time to enqueue message 4 (Priority 50). To prove priority preemption deterministically, KERNOX uses an anonymous pipe handshake: the consumer waits until the parent finishes enqueuing all 5 messages. Once notified, the consumer reads the queue and receives them in strict priority order: 50 -> 30 -> 10 -> 5 -> 5.
-
-### Q37: How does `mq_timedreceive(3)` implement timeouts?
-**Answer:** `mq_timedreceive` takes a pointer to `struct timespec` representing an **absolute** wall-clock expiration time, not a relative duration. KERNOX converts the requested relative timeout (e.g. 500ms) by sampling `clock_gettime(CLOCK_REALTIME, &now)`, adding 500ms, and passing the absolute time. If no message arrives before that time, the call returns `ETIMEDOUT`, which KERNOX translates to `core::ErrorCode::Timeout`.
-
----
-
-## Category 13: Memory Safety, Concurrency & RAII
-
-### Q38: What is the Rule of Five, and how is it applied in KERNOX RAII wrappers?
-**Answer:** The Rule of Five states that if a class customizes any of the destructor, copy constructor, copy assignment, move constructor, or move assignment, it should explicitly define all five. In `UniqueFd`, `ChildProcess`, `SharedMemory`, `UnixSocket`, and `PosixMessageQueue`:
-- Copy constructor and copy assignment are `= delete` (resources cannot be duplicated).
-- Move constructor and move assignment are implemented `noexcept` (transferring ownership and resetting the source to an invalid/null handle).
-- Destructor cleans up the resource safely (`close`, `waitpid`, `munmap`, `mq_close`).
-
-### Q39: What is the purpose of `std::atomic_thread_fence`, and why did GCC's ThreadSanitizer reject it?
-**Answer:** `std::atomic_thread_fence(std::memory_order_release)` enforces a hardware CPU memory barrier ensuring that all prior memory writes (e.g. initializing mutexes, condvars, and slots in shared memory) are committed and visible to other CPU cores before publishing the `MAGIC` header value. GCC's TSan runtime rejects standalone thread fences (`-Werror=tsan`) because TSan tracks races per address and cannot model unaddressed fences without variable instrumentation. KERNOX guards fences with `#ifndef __SANITIZE_THREAD__`.
-
-### Q40: What specific bugs are detected by AddressSanitizer (ASan) and UndefinedBehaviorSanitizer (UBSan)?
-**Answer:**
-- **ASan:** Out-of-bounds heap, stack, and global buffer accesses; use-after-free; use-after-return; double free; and memory leaks.
-- **UBSan:** Signed integer overflow, misaligned pointer dereferencing, division by zero, null pointer arithmetic, and invalid enum value casts.
-KERNOX compiles and runs cleanly under both sanitizers with 0 warnings and 0 errors.
-
----
-
-## Category 14: Practical Systems Scenarios & Edge Cases
-
-### Q41: What happens if a process calls `execve()` on a non-existent binary or a file without execute permissions?
-**Answer:** `execve` returns -1 and sets `errno` to `ENOENT` (No such file or directory) or `EACCES` (Permission denied). KERNOX's child error pipe captures this integer, sends it to the parent, and exits via `::_exit(127)`. The parent reads the code and wraps it in `core::Result::err(ErrorCode::NotFound)` or `ErrorCode::PermissionDenied`.
-
-### Q42: What is a zombie process, and how does `ChildProcess` guarantee that zombies are never created?
-**Answer:** A zombie process occurs when a child terminates but its parent has not yet read its exit status via `waitpid()`, leaving an entry in the kernel process table. `ChildProcess` prevents zombies via its destructor: if the child is still running, it terminates it (`SIGTERM`/`SIGKILL`), and unconditionally calls `waitpid(pid_, &status, 0)` to reap the process table entry.
-
-### Q43: What happens if a process attempts to write to a pipe whose read end has been closed?
-**Answer:** The Linux kernel generates a `SIGPIPE` signal and sets `errno = EPIPE`. If `SIGPIPE` is not handled or ignored, the default action terminates the process. KERNOX handles or prevents `SIGPIPE` (e.g. using `MSG_NOSIGNAL` on sockets or ignoring `SIGPIPE`), ensuring the write call returns an error mapped to `core::ErrorCode::IoError` rather than crashing.
-
-### Q44: Why does KERNOX use `_exit()` instead of `exit()` in child processes after `fork()`?
-**Answer:** Standard `exit(3)` flushes and closes user-space C stdio buffers (`stdout`, `stderr`) and executes functions registered with `atexit()`. Because `fork()` duplicates user-space memory, calling `exit()` in the child could flush buffered parent data a second time or invoke parent cleanup handlers. `_exit(2)` terminates the process immediately at the kernel level without touching parent stdio buffers.
-
-### Q45: How does KERNOX guarantee that named POSIX objects in `/dev/shm` and `/dev/mqueue` are not leaked if a test or process crashes?
-**Answer:**
-1. In normal execution, RAII destructors call `shm_unlink()` and `mq_unlink()`.
-2. In automated tests and CLI commands, object names incorporate the unique process ID (e.g. `/kernox_mq_demo_<pid>`), ensuring no name collisions occur.
-3. Tests include explicit cleanup teardown blocks that execute `unlink` even if an assertion triggers early exit.
+### Q40: How does `tools/analytics` enforce data provenance separation?
+**Answer:** `tools/analytics/src/kernox_analytics/validators.py` inspects the root `source` or `domain` field of every ingested JSON file. If an experiment analysis script receives a dataset tagged with `source: "android_adb_observation"`, or if an Android analyzer receives a simulation dataset tagged with `domain: "kernox_simulation"`, the validator raises a `ProvenanceError` and aborts. This prevents accidental blending of simulated and real telemetry.

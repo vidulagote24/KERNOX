@@ -1,86 +1,71 @@
-# KERNOX — System Limitations and Future Scope
+# KERNOX 2.0 — System Scope, Limitations, and Future Directions
 
-**Project:** KERNOX — A Comprehensive Operating Systems Simulation and Linux Systems Programming Platform
-**Status:** Phase 5 Final Release Candidate
-**Auditor:** KERNOX Systems Engineering Team
+**Project:** KERNOX 2.0: Android Resource Intelligence & Memory Reclamation Platform
+**Target Architecture:** Linux/POSIX (WSL 2 / Ubuntu 24.04 LTS)
+**Engineering Standard:** Truthful, Non-Hyped Systems Engineering
 
 ---
 
 ## 1. Classification Overview
 
-To maintain **Zero-Falsehood Engineering Integrity**, this document explicitly categorizes every architectural domain of KERNOX into:
-1. **Fully Implemented & Verified Functionality**
-2. **Partially Implemented Functionality**
-3. **Known Technical Limitations**
-4. **Features Deliberately Not Implemented (Out of Scope)**
-5. **Future Scope (Potential Post-Phase 5 Extensions)**
+To maintain zero-falsehood engineering integrity, this document explicitly categorizes all architectural areas of KERNOX 2.0 into:
+1. **Fully Implemented & Verified Subsystems**
+2. **Deliberate Design Boundaries & Scope Constraints**
+3. **Known Technical Assumptions**
+4. **Future Research Directions**
 
 ---
 
-## 2. Fully Implemented & Verified Functionality
+## 2. Fully Implemented & Verified Subsystems
 
-The following subsystems have been fully implemented in Modern C++20, linked into `kernox`, and verified by 16 automated CTest suites passing 100% across Debug, Release, and AddressSanitizer presets:
+The following components are implemented in Modern C++20 and Python, verified by 11 C++ test suites (100% passing in Debug and Release) and 36 Python unit tests:
 
-1. **CPU Scheduling Engine:** FCFS, SJF, SRTF, Round Robin, Priority Scheduling, and Multilevel Feedback Queue (MLFQ) with priority aging and ASCII Gantt chart generation.
-2. **Disk Scheduling Engine:** FCFS, SSTF, SCAN, C-SCAN, LOOK, and C-LOOK with direction tracking and Total Head Movement (THM) metrics.
-3. **Deadlock Management Engine:** Dijkstra's Banker's Algorithm, dynamic resource request simulation with automatic state rollback, multiple-instance deadlock detection, and Resource Allocation Graph (RAG) cycle detection via DFS.
-4. **Memory Management Engine:** Contiguous First Fit, Best Fit, Worst Fit, Next Fit with dynamic block splitting and coalescing; MMU paging translation; page replacement policies (FIFO, LRU, Optimal/MIN); and Peter Denning's Working-Set model $W(t, \Delta)$.
-5. **Real POSIX Process Management:** RAII process spawning (`fork`/`execv`/`execve`), error pipe propagation, wall-clock timeout enforcement with signal escalation (`SIGTERM` -> grace -> `SIGKILL`), POSIX resource constraints (`RLIMIT_CPU`, `RLIMIT_AS`, `RLIMIT_NOFILE`, `RLIMIT_FSIZE`), and `wait4` `rusage` accounting.
-6. **System & Process Telemetry:** Live host sampling (`/proc/stat`, `/proc/meminfo`, `/proc/loadavg`, `/proc/uptime`) and per-process telemetry (`/proc/<pid>/stat`, `/proc/<pid>/status`, `/proc/<pid>/io`).
-7. **Pipes & Named FIFOs:** Move-only RAII descriptors, throughput benchmarking, named FIFOs (`mkfifo`), and `PIPE_BUF` atomic write validation.
-8. **POSIX Shared Memory:** Move-only RAII `SharedMemory` mapping (`shm_open`, `ftruncate`, `mmap`, `munmap`, `shm_unlink`), owner-PID unlinking, and multi-region coordination.
-9. **Process-Shared Synchronization:** Robust process-shared mutexes (`PTHREAD_PROCESS_SHARED`, `PTHREAD_MUTEX_ROBUST`, `EOWNERDEAD` recovery), named and unnamed POSIX semaphores (`sem_open`, `sem_init`), and process-shared condition variables.
-10. **Bounded Shared-Memory Ring Buffer:** Zero-heap multi-process circular queue with monotonic slot sequence numbers and cooperative shutdown signaling.
-11. **UNIX Domain Sockets:** Full-duplex stream and datagram sockets (`AF_UNIX`), socketpairs, peer credential authentication (`SO_PEERCRED`), and file descriptor transfer (`SCM_RIGHTS`).
-12. **POSIX Message Queues:** Move-only RAII `PosixMessageQueue` (`mq_open`, `mq_send`, `mq_receive`, `mq_timedsend`, `mq_timedreceive`), strict priority preemption (priorities 0–32,767), and equal-priority FIFO ordering.
-
----
-
-## 3. Partially Implemented Functionality
-
-1. **Structured Data Export:**
-   - **Current State:** Benchmark numbers and simulation traces are rendered to `std::cout` using formatted ASCII tables and Gantt charts.
-   - **Partial Element:** Automated structured machine-readable export (`--format json` or `--format csv` directly to disk files) is not yet universally available across all simulation subcommands.
-2. **Workload Ingestion:**
-   - **Current State:** Simulations accept standard built-in workloads (`basic`, `arrivals`, `priority-demo`, `canonical`, `allocation-demo`, `paging-demo`) or CLI parameters.
-   - **Partial Element:** Loading arbitrary external JSON or YAML trace files from disk is not yet implemented.
+1. **System Telemetry & Status (`kernox_system`):**
+   Live, non-invasive observation of the Linux host environment via `/proc/stat`, `/proc/meminfo`, `/proc/loadavg`, and `/proc/uptime`.
+2. **Process Intelligence Model (`kernox_intel`):**
+   Full application process modeling with Android importance tiers (`Foreground`, `Visible`, `Service`, `Background`, `Cached`), distinct CPU scheduling priorities, resident/peak memory tracking, dynamic demand events, and lifecycle state transitions.
+3. **Memory Pressure Detection & Reclamation Engine (`kernox_reclaim`):**
+   Configurable pressure detection thresholds (Moderate at 75%, Critical at 90%) and four distinct memory reclamation policies:
+   - `FIFO` (Eviction by admission order)
+   - `LRU` (Eviction by recency of CPU activity)
+   - `Priority` (Eviction by numerical CPU priority)
+   - `ImportanceAware` (Android-inspired tier-conscious eviction preserving user-facing foreground apps)
+4. **Deterministic Workload Experiment Engine (`kernox_experiment`):**
+   Deterministic workload generator backed by Mersenne Twister PRNG (`std::mt19937_64`), 5 built-in scenarios (`Normal`, `HighMemoryPressure`, `BackgroundHeavy`, `ForegroundProtection`, `Mixed`), FNV-1a fingerprinting, and structured JSON/CSV export.
+5. **Passive Android ADB Subsystem (`kernox_adb`):**
+   Read-only Android device discovery, `dumpsys meminfo` telemetry parsing, and process observation tables. Resilient offline handling when hardware is disconnected.
+6. **Interactive Android Resource Simulator (`kernox_simulator`):**
+   Terminal-driven interactive menu supporting 10 discrete operations, custom process creation, clock advancement, pressure injection, ASCII visualizations, safe overwrite confirmation, and independent project-root discovery.
+7. **Python Analytics Platform (`tools/analytics`):**
+   Strict domain provenance enforcement, schema validation, non-additive memory metrics calculations, publication-grade matplotlib chart generation, and automated markdown reports.
 
 ---
 
-## 4. Known Technical Limitations
+## 3. Deliberate Design Boundaries & Scope Constraints
 
-1. **WSL2 ThreadSanitizer ASLR Restriction (`dev-tsan`):**
-   - **Limitation:** Running TSan binaries on Ubuntu 24.04 under WSL2 terminates with `FATAL: ThreadSanitizer: unexpected memory mapping`.
-   - **Cause:** Linux kernel 6.6 on WSL2 configures high-entropy 48-bit address randomization that conflicts with compiler-rt's fixed shadow memory mapping.
-   - **Mitigation:** The codebase compiles cleanly with `-fsanitize=thread` with 0 warnings, and ASan/UBSan runs with 100% pass rate.
-2. **Kernel Privileges on `/proc/<pid>/io`:**
-   - **Limitation:** Reading `/proc/<pid>/io` for root-owned processes (such as PID 1) requires root privileges (`PTRACE_MODE_READ_FSCREDS`).
-   - **Mitigation:** When run as an unprivileged user, KERNOX gracefully falls back, displaying `PermissionDenied` without failing or crashing.
-3. **Single-Node Linux Restriction:**
-   - **Limitation:** Real systems programming modules (`kernox_system`) rely on POSIX/Linux-specific APIs (`AF_UNIX`, `epoll`, `shm_open`, `mq_open`, `wait4`, `/proc`) and cannot execute on native Windows without WSL or on macOS without POSIX compatibility adjustments.
+KERNOX 2.0 was deliberately designed around the following architectural boundaries:
 
----
-
-## 5. Features Deliberately Not Implemented (Out of Scope)
-
-The following features were intentionally excluded to maintain architectural focus and academic clarity:
-1. **Linux Kernel Loadable Modules (LKM) & Device Drivers:** KERNOX is an educational platform and user-space systems engineering platform, not a bare-metal kernel.
-2. **Full In-Memory Filesystems (e.g. ext4/ZFS):** Implementing complete physical disk block drivers and journaling file systems is outside the scope of user-space operating systems simulations.
-3. **Distributed Network IPC:** Network sockets (`AF_INET`/`AF_INET6`) were deliberately excluded to focus on local high-performance IPC (`AF_UNIX`, POSIX shared memory, message queues).
+1. **User-Space Simulation vs. Kernel Mod:**
+   The memory reclamation engine executes in user space as a simulation environment. It does **not** alter Linux kernel memory management or terminate host processes. This ensures safety and portability across development workstations.
+2. **Read-Only Mobile Observation:**
+   The ADB subsystem enforces strict read-only semantics. It never installs packages, kills processes on attached phones, or alters Android system properties.
+3. **Strict Domain Provenance:**
+   Simulation outputs (`kernox_simulation`) and real device observations (`android_adb_observation`) are strictly segregated. Data from simulated runs cannot be passed as live hardware observations, preventing benchmark conflation.
 
 ---
 
-## 6. Future Scope (Long-Term Extensions)
+## 4. Known Technical Assumptions
 
-For future cohorts, researchers, or open-source contributors, the following milestones represent high-value extensions:
+- **Host Telemetry Availability:** Telemetry collection assumes a standard Linux `/proc` filesystem structure (standard on Linux and WSL 2).
+- **Single-Run Wall-Clock Latency:** Execution timings recorded in C++ represent single-run host wall-clock latencies. As noted in analytics reports, these reflect host measurement conditions and do not represent algorithmic complexity rankings.
 
-1. **User-Space Thread Pool & Work-Stealing Runtime (Phase 5A):**
-   - Implement a C++20 thread pool with task stealing and lock-free ring queues.
-   - Benchmark spinlocks vs reader-writer locks (`pthread_rwlock_t`) vs `std::mutex`.
-2. **Virtual Inode Filesystem Simulator (Phase 5B):**
-   - Simulate a virtual disk platter with superblock, inode allocation bitmap, data block bitmaps, and indirect block pointers.
-   - Support simulated `mkdir`, `create`, `write`, `read`, and `unlink`.
-3. **System Call Tracer (`sysmon` via `ptrace`) (Phase 5C):**
-   - Build a lightweight `strace` alternative using `ptrace(PTRACE_SYSCALL)` to intercept and catalog child process system calls in real time.
-4. **Unified Cross-Subsystem Benchmark Runner (Phase 5D):**
-   - Provide a top-level `kernox bench` command that executes CPU, memory, and IPC benchmarks side-by-side and produces comparative performance plots.
+---
+
+## 5. Future Research Directions
+
+1. **Linux PSI (Pressure Stall Information) Integration:**
+   Extending the system telemetry collector to monitor `/proc/pressure/memory` for kernel-level memory stall metrics on supported Linux kernels.
+2. **zRAM & Memory Compaction Modeling:**
+   Incorporating simulated zRAM compression ratios and memory compaction overhead into the reclamation simulator.
+3. **Real-Time Live Web Visualizer:**
+   Providing an optional lightweight WebSocket server to stream simulator state updates to an interactive browser frontend.

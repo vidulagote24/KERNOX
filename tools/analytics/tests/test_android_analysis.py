@@ -8,10 +8,11 @@ from kernox_analytics.loader import load_android_snapshot, load_experiment_file
 from kernox_analytics.validators import ProvenanceError
 
 EXAMPLES_DIR = Path(__file__).resolve().parent.parent / "examples"
+FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 
 
 def test_analyze_android_snapshot():
-    path = EXAMPLES_DIR / "android" / "pixel7_snapshot.json"
+    path = FIXTURES_DIR / "android_snapshot_fixture.json"
     ds = load_android_snapshot(path)
     summary = AndroidAnalyzer.analyze_snapshot(ds)
 

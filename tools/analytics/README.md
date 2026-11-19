@@ -22,13 +22,13 @@ From the repository root (`E:\KERNOX(OS CP)` or `/mnt/e/KERNOX(OS CP)` under WSL
 
 ```bash
 # 1. Create dedicated isolated virtual environment
-python3 -m venv tools/analytics/.venv
+python3 -m venv .venv
 
 # 2. Activate virtual environment
 # On Linux / WSL:
-source tools/analytics/.venv/bin/activate
+source .venv/bin/activate
 # On Windows (PowerShell):
-.\tools\analytics\.venv\Scripts\Activate.ps1
+.\.venv\Scripts\Activate.ps1
 
 # 3. Install dependencies
 pip install -r tools/analytics/requirements.txt
@@ -87,7 +87,7 @@ Visualizes real-world Android device memory and process hierarchies:
 
 ```bash
 PYTHONPATH=tools/analytics/src python3 -m kernox_analytics.cli android \
-  --input tools/analytics/examples/android/pixel7_snapshot.json \
+  --input tools/analytics/tests/fixtures/android_snapshot_fixture.json \
   --output tools/analytics/output
 ```
 
@@ -123,10 +123,10 @@ KERNOX enforces strict data provenance boundaries across three separate domains:
 
 ## 5. Automated Verification & Testing
 
-Run the full pytest suite (31 tests) without requiring Android hardware:
+Run the full pytest suite (36 tests) without requiring Android hardware:
 
 ```bash
 PYTHONPATH=tools/analytics/src pytest tools/analytics/tests -v
 ```
 
-All tests use deterministic mock fixtures in `tools/analytics/examples/` and execute offline in headless CI environments.
+All tests use deterministic mock fixtures in `tools/analytics/tests/fixtures/` and execute offline in headless CI environments.
